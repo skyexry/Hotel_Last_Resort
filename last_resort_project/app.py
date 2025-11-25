@@ -267,6 +267,52 @@ def reports():
                            report_demographics=report_demographics,
                            active_page='reports')
 
+@app.route('/search')
+def search():
+    query = request.args.get('q', '').strip()
+    results_guests = []
+    results_resv = []
+    
+    if query:
+        db = get_db()
+        search_term = f"%{query}%"
+
+        results_guests = db.execute("""
+            SELECT p.partyId, 
+                   CASE 
+                       WHEN pe.partyId IS NOT NULL THEN 'Person' 
+                       WHEN o.partyId IS NOT NULL THEN 'Organization' 
+                       ELSE 'Unknown' 
+                   END as type,
+                   p.email, p.phone,
+                   pe.firstName, pe.lastName, 
+                   o.orgName
+            FROM party p
+            LEFT JOIN person pe ON p.partyId = pe.partyId
+            LEFT JOIN organization o ON p.partyId = o.partyId
+            WHERE pe.firstName LIKE ? 
+               OR pe.lastName LIKE ? 
+               OR o.orgName LIKE ? 
+               OR p.email LIKE ?
+        """, (search_term, search_term, search_term, search_term)).fetchall()
+
+        if query.isdigit():
+            results_resv = db.execute("""
+                SELECT r.resvId, r.startDate, r.endDate, r.status,
+                       pe.firstName, pe.lastName, o.orgName
+                FROM reservation r
+                JOIN party p ON r.partyId = p.partyId
+                LEFT JOIN person pe ON p.partyId = pe.partyId
+                LEFT JOIN organization o ON p.partyId = o.partyId
+                WHERE r.resvId = ?
+            """, (query,)).fetchall()
+        
+    return render_template('search.html', 
+                           active_page='search', 
+                           query=query, 
+                           guests=results_guests, 
+                           reservations=results_resv)
+
 if __name__ == '__main__':
     # Init DB only if file doesn't exist to avoid overwriting every time
     if not os.path.exists(DATABASE):
