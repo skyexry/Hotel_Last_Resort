@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="mb-4">
+    <a href="/rooms" class="btn btn-outline-secondary">&larr; Back to Rooms List</a>
+</div>
+
+<div class="row">
+    <div class="col-md-5">
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-dark-blue text-white py-3">
+                <h3 class="mb-0">Room {{ room.roomNumber }}</h3>
+            </div>
+            <div class="card-body">
+                <div class="mb-3 text-center">
+                    <span class="badge rounded-pill 
+                        {% if room.currentStatus=='Clean' %}bg-success
+                        {% elif room.currentStatus=='Occupied' %}bg-primary
+                        {% else %}bg-danger{% endif %} fs-6 px-3 py-2">
+                        {{ room.currentStatus }}
+                    </span>
+                </div>
+                
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span class="text-muted">Base Rate:</span>
+                        <span class="fw-bold fs-5">${{ room.baseRate }}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span class="text-muted">Location:</span>
+                        <span>{{ room.wingName }}, Floor {{ room.floorNo }}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span class="text-muted">Smoking Policy:</span>
+                        <span>
+                            {% if room.isSmokingRoom %}
+                                <span class="text-danger"><i class="bi bi-fire"></i> Smoking Allowed</span>
+                            {% else %}
+                                <span class="text-success"><i class="bi bi-ban"></i> Non-Smoking</span>
+                            {% endif %}
+                        </span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-7">
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">Bed Configuration</h5>
+            </div>
+            <div class="card-body">
+                {% if beds %}
+                    <table class="table table-sm">
+                        <thead><tr><th>Count</th><th>Bed Type</th><th>Capacity (ppl)</th></tr></thead>
+                        <tbody>
+                            {% for bed in beds %}
+                            <tr>
+                                <td><span class="badge bg-secondary rounded-circle">{{ bed.count }}</span></td>
+                                <td>{{ bed.name }}</td>
+                                <td>{{ bed.capacity }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                {% else %}
+                    <p class="text-muted mb-0">No beds assigned (Meeting Room/Function Room).</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="card shadow-sm">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">Room Type & Amenities</h5>
+            </div>
+            <div class="card-body">
+                {% if functions %}
+                    <div class="d-flex gap-2 flex-wrap">
+                        {% for func in functions %}
+                            <span class="badge bg-info text-dark p-2 fs-6">{{ func.name }}</span>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-muted mb-0">No specific functions listed.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
