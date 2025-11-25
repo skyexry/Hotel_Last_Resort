@@ -1,0 +1,133 @@
+<!-- checked: All 6 A-level queries included -->
+{% extends "base.html" %}
+{% block content %}
+<h2>Executive Reports</h2>
+<p class="text-muted">High-level business intelligence data.</p>
+
+<div class="row mt-4 g-4">
+    <!-- 1. Top Revenue -->
+    <div class="col-md-6">
+        <div class="card h-100 shadow-sm">
+            <div class="card-header bg-white"><h5 class="mb-0">Top 10 High-Value Clients</h5></div>
+            <div class="card-body">
+                <table class="table table-striped table-sm">
+                    <thead><tr><th>Rank</th><th>Party Name</th><th>Stays</th><th class="text-end">Total Spend</th></tr></thead>
+                    <tbody>
+                        {% for row in report_revenue %}
+                        <tr>
+                            <td>{{ loop.index }}</td>
+                            <td>{{ row.partyName }}</td>
+                            <td>{{ row.stays }}</td>
+                            <td class="text-end fw-bold">${{ row.totalSpent }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. Room Utilization -->
+    <div class="col-md-6">
+        <div class="card h-100 shadow-sm">
+            <div class="card-header bg-white"><h5 class="mb-0">Current Room Utilization</h5></div>
+            <div class="card-body">
+                <table class="table table-sm">
+                    <thead><tr><th>Type</th><th>Total</th><th>Occupied</th><th>Rate</th></tr></thead>
+                    <tbody>
+                        {% for row in report_util %}
+                        <tr>
+                            <td>{{ row.name }}</td>
+                            <td>{{ row.total_rooms }}</td>
+                            <td>{{ row.occupied_count }}</td>
+                            <td>
+                                <div class="progress" style="height: 20px;">
+                                    <div class="progress-bar {% if row.util_rate > 70 %}bg-success{% else %}bg-info{% endif %}" 
+                                         role="progressbar" style="width: {{ row.util_rate }}%">{{ row.util_rate }}%</div>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. Monthly Revenue Trend -->
+    <div class="col-md-4">
+        <div class="card h-100 shadow-sm">
+            <div class="card-header bg-white"><h5 class="mb-0">Monthly Revenue</h5></div>
+            <div class="card-body">
+                <table class="table table-sm">
+                    <thead><tr><th>Month</th><th class="text-end">Revenue</th></tr></thead>
+                    <tbody>
+                        {% for row in report_monthly %}
+                        <tr>
+                            <td>{{ row.month }}</td>
+                            <td class="text-end text-success fw-bold">${{ row.revenue }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- 4. Service Type Popularity -->
+    <div class="col-md-4">
+        <div class="card h-100 shadow-sm">
+            <div class="card-header bg-white"><h5 class="mb-0">Revenue by Source</h5></div>
+            <div class="card-body">
+                <ul class="list-group list-group-flush">
+                    {% for row in report_service %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        {{ row.description }}
+                        <span class="badge bg-primary rounded-pill">${{ row.total_revenue }}</span>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- 5. Cancellation Rate -->
+    <div class="col-md-4">
+        <div class="card h-100 shadow-sm">
+            <div class="card-header bg-white"><h5 class="mb-0">Reservations Overview</h5></div>
+            <div class="card-body">
+                <table class="table table-sm">
+                    <thead><tr><th>Month</th><th>Total</th><th>Cancelled</th></tr></thead>
+                    <tbody>
+                        {% for row in report_cancel %}
+                        <tr>
+                            <td>{{ row.month }}</td>
+                            <td>{{ row.total_resv }}</td>
+                            <td class="text-danger">{{ row.cancelled_count }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 6. Demographics Summary -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card bg-light border-0 p-3 text-center">
+            <h5>Guest Analysis Snapshot</h5>
+            <div class="d-flex justify-content-center gap-5 mt-2">
+                {% for row in report_demographics %}
+                <div>
+                    <h3 class="text-primary-navy">{{ row.party_type }}s</h3>
+                    <p class="mb-0">Avg Spend: <strong>${{ row.avg_spend }}</strong></p>
+                    <small class="text-muted">Active Accounts: {{ row.active_accounts }}</small>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,25 @@
+<!-- checked: Scrollable list included -->
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Guests & Parties Directory <small class="text-muted">({{ parties|length }} Records)</small></h2>
+</div>
+
+<div class="table-scroll-container card">
+    <table class="table table-hover mb-0">
+        <thead class="table-light"><tr><th>ID</th><th>Name / Org</th><th>Type</th><th>Email</th><th>Phone</th></tr></thead>
+        <tbody>
+            {% for p in parties %}
+            <tr>
+                <td>{{ p.partyId }}</td>
+                <td><strong>{{ p.firstName }} {{ p.lastName }}{{ p.orgName }}</strong></td>
+                <td><span class="badge bg-secondary">{{ p.type }}</span></td>
+                <td>{{ p.email }}</td>
+                <td>{{ p.phone }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+<div class="mt-2 text-muted small text-end">Scroll to view more guests ↕</div>
+{% endblock %}
