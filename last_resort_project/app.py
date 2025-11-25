@@ -313,6 +313,41 @@ def search():
                            guests=results_guests, 
                            reservations=results_resv)
 
+@app.route('/room/<int:room_id>')
+def room_detail(room_id):
+    db = get_db()
+    room = db.execute("""
+        SELECT r.*, w.wingName, f.floorNo
+        FROM room r
+        JOIN floor f ON r.floorId = f.floorId
+        JOIN wing w ON f.wingId = w.wingId
+        WHERE r.roomId = ?
+    """, (room_id,)).fetchone()
+
+    if room is None:
+        return "Room not found", 404
+
+    beds = db.execute("""
+        SELECT b.name, rb.count, b.capacity
+        FROM room_has_bed rb
+        JOIN bed_type b ON rb.bedTypeId = b.bedTypeId
+        WHERE rb.roomId = ?
+    """, (room_id,)).fetchall()
+
+    functions = db.execute("""
+        SELECT rf.name
+        FROM room_has_function rhf
+        JOIN room_function rf ON rhf.functionCode = rf.functionCode
+        WHERE rhf.roomId = ?
+    """, (room_id,)).fetchall()
+
+    return render_template('room_detail.html', 
+                           room=room, 
+                           beds=beds, 
+                           functions=functions,
+                           active_page='rooms')
+
+
 if __name__ == '__main__':
     # Init DB only if file doesn't exist to avoid overwriting every time
     if not os.path.exists(DATABASE):
