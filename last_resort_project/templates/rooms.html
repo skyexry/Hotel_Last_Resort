@@ -20,7 +20,7 @@
         <tbody>
             {% for room in rooms %}
             <tr>
-                <td><span class="fs-5 fw-bold">{{ room.roomNumber }}</span></td>
+                <td><a href="/room/{{ room.roomId }}" class="fs-5 fw-bold text-decoration-none">{{ room.roomNumber }}</a></td>
                 <td>{{ room.wingName }} - FL {{ room.floorNo }}</td>
                 <td>{{ room.funcName }}</td>
                 <td>${{ room.baseRate }}</td>
