@@ -1,4 +1,4 @@
--- checked: Latest version with 3NF and detailed attributes
+-- checked: Schema verified for 3NF and completeness
 -- 1. 基础架构表
 CREATE TABLE hotel (
     hotelId INTEGER PRIMARY KEY,
@@ -48,6 +48,19 @@ CREATE TABLE room (
     FOREIGN KEY(floorId) REFERENCES floor(floorId)
 );
 
+CREATE TABLE room_fixture (
+    fixtureId INTEGER PRIMARY KEY,
+    name TEXT
+);
+
+CREATE TABLE room_has_fixture (
+    roomId INTEGER,
+    fixtureId INTEGER,
+    PRIMARY KEY (roomId, fixtureId),
+    FOREIGN KEY(roomId) REFERENCES room(roomId),
+    FOREIGN KEY(fixtureId) REFERENCES room_fixture(fixtureId)
+);
+
 CREATE TABLE room_has_function (
     roomId INTEGER,
     functionCode TEXT,
@@ -65,7 +78,28 @@ CREATE TABLE room_has_bed (
     FOREIGN KEY(bedTypeId) REFERENCES bed_type(bedTypeId)
 );
 
--- 3. 客户与Party (超类/子类)
+-- 连通房
+CREATE TABLE room_adjacency (
+    roomId1 INTEGER,
+    roomId2 INTEGER,
+    connectionType TEXT, 
+    PRIMARY KEY (roomId1, roomId2),
+    FOREIGN KEY(roomId1) REFERENCES room(roomId),
+    FOREIGN KEY(roomId2) REFERENCES room(roomId)
+);
+
+-- 维修工单
+CREATE TABLE maintenance_ticket (
+    ticketId INTEGER PRIMARY KEY,
+    roomId INTEGER,
+    issueDescription TEXT,
+    status TEXT,
+    dateCreated DATE,
+    dateResolved DATE,
+    FOREIGN KEY(roomId) REFERENCES room(roomId)
+);
+
+-- 3. 客户与Party
 CREATE TABLE party (
     partyId INTEGER PRIMARY KEY,
     email TEXT,
@@ -89,11 +123,11 @@ CREATE TABLE organization (
 -- 4. 预订与入住
 CREATE TABLE reservation (
     resvId INTEGER PRIMARY KEY,
-    partyId INTEGER, -- Booked By
+    partyId INTEGER, 
     dateCreated DATETIME DEFAULT CURRENT_TIMESTAMP,
     startDate DATE,
     endDate DATE,
-    status TEXT, -- Booked, CheckedIn, CheckedOut, Cancelled
+    status TEXT, 
     FOREIGN KEY(partyId) REFERENCES party(partyId)
 );
 
@@ -116,22 +150,23 @@ CREATE TABLE room_assignment (
 -- 5. 账单与服务
 CREATE TABLE billing_account (
     accountId INTEGER PRIMARY KEY,
-    partyId INTEGER, -- Responsible Party
-    status TEXT, -- Open, Closed
+    partyId INTEGER,
+    status TEXT,
     FOREIGN KEY(partyId) REFERENCES party(partyId)
 );
 
 CREATE TABLE service_type (
-    serviceCode TEXT PRIMARY KEY, -- ROOM, FOOD, SPA, EVENT, MISC
+    serviceCode TEXT PRIMARY KEY,
     description TEXT
 );
 
 CREATE TABLE event (
     eventId INTEGER PRIMARY KEY,
     name TEXT,
+    description TEXT,
     startDate DATETIME,
     endDate DATETIME,
-    partyId INTEGER, -- Host
+    partyId INTEGER,
     roomId INTEGER,
     FOREIGN KEY(partyId) REFERENCES party(partyId),
     FOREIGN KEY(roomId) REFERENCES room(roomId)
@@ -144,8 +179,8 @@ CREATE TABLE charge (
     description TEXT,
     amount REAL,
     dateIncurred DATE,
-    stayId INTEGER, -- Optional link
-    eventId INTEGER, -- Optional link
+    stayId INTEGER,
+    eventId INTEGER,
     FOREIGN KEY(accountId) REFERENCES billing_account(accountId),
     FOREIGN KEY(serviceCode) REFERENCES service_type(serviceCode)
 );

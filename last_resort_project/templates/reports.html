@@ -1,4 +1,4 @@
-<!-- checked: All 6 A-level queries included -->
+<!-- checked: Reports verified with color fixes -->
 {% extends "base.html" %}
 {% block content %}
 <h2>Executive Reports</h2>
@@ -10,7 +10,7 @@
         <div class="card h-100 shadow-sm">
             <div class="card-header bg-white"><h5 class="mb-0">Top 10 High-Value Clients</h5></div>
             <div class="card-body">
-                <table class="table table-striped table-sm">
+                <table class="table table-striped table-sm mb-0">
                     <thead><tr><th>Rank</th><th>Party Name</th><th>Stays</th><th class="text-end">Total Spend</th></tr></thead>
                     <tbody>
                         {% for row in report_revenue %}
@@ -18,7 +18,7 @@
                             <td>{{ loop.index }}</td>
                             <td>{{ row.partyName }}</td>
                             <td>{{ row.stays }}</td>
-                            <td class="text-end fw-bold">${{ row.totalSpent }}</td>
+                            <td class="text-end report-value">${{ row.totalSpent }}</td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -32,7 +32,7 @@
         <div class="card h-100 shadow-sm">
             <div class="card-header bg-white"><h5 class="mb-0">Current Room Utilization</h5></div>
             <div class="card-body">
-                <table class="table table-sm">
+                <table class="table table-sm mb-0">
                     <thead><tr><th>Type</th><th>Total</th><th>Occupied</th><th>Rate</th></tr></thead>
                     <tbody>
                         {% for row in report_util %}
@@ -43,7 +43,7 @@
                             <td>
                                 <div class="progress" style="height: 20px;">
                                     <div class="progress-bar {% if row.util_rate > 70 %}bg-success{% else %}bg-info{% endif %}" 
-                                         role="progressbar" style="width: {{ row.util_rate }}%">{{ row.util_rate }}%</div>
+                                         role="progressbar" style="width: {{ row.util_rate }}%; color: black;">{{ row.util_rate }}%</div>
                                 </div>
                             </td>
                         </tr>
@@ -59,13 +59,13 @@
         <div class="card h-100 shadow-sm">
             <div class="card-header bg-white"><h5 class="mb-0">Monthly Revenue</h5></div>
             <div class="card-body">
-                <table class="table table-sm">
+                <table class="table table-sm mb-0">
                     <thead><tr><th>Month</th><th class="text-end">Revenue</th></tr></thead>
                     <tbody>
                         {% for row in report_monthly %}
                         <tr>
                             <td>{{ row.month }}</td>
-                            <td class="text-end text-success fw-bold">${{ row.revenue }}</td>
+                            <td class="text-end text-success report-value">${{ row.revenue }}</td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -83,7 +83,7 @@
                     {% for row in report_service %}
                     <li class="list-group-item d-flex justify-content-between align-items-center">
                         {{ row.description }}
-                        <span class="badge bg-primary rounded-pill">${{ row.total_revenue }}</span>
+                        <span class="badge bg-primary rounded-pill text-white">${{ row.total_revenue }}</span>
                     </li>
                     {% endfor %}
                 </ul>
@@ -96,14 +96,14 @@
         <div class="card h-100 shadow-sm">
             <div class="card-header bg-white"><h5 class="mb-0">Reservations Overview</h5></div>
             <div class="card-body">
-                <table class="table table-sm">
+                <table class="table table-sm mb-0">
                     <thead><tr><th>Month</th><th>Total</th><th>Cancelled</th></tr></thead>
                     <tbody>
                         {% for row in report_cancel %}
                         <tr>
                             <td>{{ row.month }}</td>
                             <td>{{ row.total_resv }}</td>
-                            <td class="text-danger">{{ row.cancelled_count }}</td>
+                            <td class="text-danger fw-bold">{{ row.cancelled_count }}</td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -122,7 +122,7 @@
                 {% for row in report_demographics %}
                 <div>
                     <h3 class="text-primary-navy">{{ row.party_type }}s</h3>
-                    <p class="mb-0">Avg Spend: <strong>${{ row.avg_spend }}</strong></p>
+                    <p class="mb-0">Avg Spend: <strong class="report-value">${{ row.avg_spend }}</strong></p>
                     <small class="text-muted">Active Accounts: {{ row.active_accounts }}</small>
                 </div>
                 {% endfor %}

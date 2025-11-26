@@ -1,143 +1,132 @@
--- checked: Latest version with massive data generation (100+ rooms, 200+ resv)
+-- checked: Phone numbers updated to 10-digit format
 -- ==========================================
--- 1. 基础配置 (Hotel, Building, Wing, Floor)
--- ==========================================
+-- 1. 基础配置
 INSERT INTO hotel (hotelId, name) VALUES (1, 'Last Resort Hotel');
-INSERT INTO building (buildingId, hotelId, name) VALUES (1, 1, 'Grand Tower'), (2, 1, 'Conference Center');
-INSERT INTO wing (wingId, buildingId, wingName) VALUES (1, 1, 'North Wing'), (2, 1, 'South Wing'), (3, 2, 'East Wing');
+INSERT INTO building (buildingId, hotelId, name) VALUES (1, 1, 'The Manor'), (2, 1, 'Ocean Pavilion');
+INSERT INTO wing (wingId, buildingId, wingName) VALUES (1, 1, 'East Wing'), (2, 1, 'West Wing'), (3, 2, 'Villa Wing');
 
--- 楼层 (12层)
+-- 生成 5 层楼
 INSERT INTO floor (floorId, wingId, floorNo) VALUES 
-(1,1,1), (2,1,2), (3,1,3), (4,1,4), (5,1,5),
-(6,2,1), (7,2,2), (8,2,3), (9,2,4), (10,2,5),
-(11,3,1), (12,3,2);
+(1,1,1), (2,1,2), (3,1,3), (4,1,4), (5,1,5), 
+(6,2,1), (7,2,2), (8,2,3), (9,2,4), (10,2,5); 
 
--- 基础类型 (Function, Bed, Service)
-INSERT INTO room_function VALUES ('SLP', 'Sleeping'), ('MTG', 'Meeting'), ('STE', 'Suite');
-INSERT INTO bed_type VALUES (1, 'King', 2), (2, 'Queen', 2), (3, 'Twin', 1);
-INSERT INTO service_type VALUES ('ROOM', 'Room Charge'), ('FOOD', 'Restaurant & Bar'), ('SPA', 'Health & Spa'), ('EVENT', 'Event Fee'), ('MISC', 'Miscellaneous');
+-- 基础类型
+INSERT INTO room_function VALUES ('SLP', 'Guest Room'), ('MTG', 'Meeting Salon'), ('STE', 'Grand Suite');
+INSERT INTO bed_type VALUES (1, 'King', 2), (2, 'Queen', 2), (3, 'Twin', 1), (4, 'California King', 2);
+INSERT INTO service_type VALUES ('ROOM', 'Room Charge'), ('FOOD', 'Dining'), ('SPA', 'Wellness'), ('EVENT', 'Banquet'), ('MISC', 'Concierge');
+INSERT INTO room_fixture (fixtureId, name) VALUES (1, 'OLED TV'), (2, 'Crystal Bar'), (3, 'Marble Bath'), (4, 'Terrace'), (5, 'Workstation');
 
--- ==========================================
--- 2. 房间 (Rooms) - 生成 100+ 房间
--- ==========================================
--- North Wing (Standard)
+-- 2. 房间 (60+)
+-- East Wing (Floors 1-5)
 INSERT INTO room (roomId, floorId, roomNumber, baseRate, currentStatus, isSmokingRoom) VALUES
-(101, 1, 'N-101', 200, 'Clean', 0), (102, 1, 'N-102', 200, 'Occupied', 0), (103, 1, 'N-103', 200, 'Dirty', 1), (104, 1, 'N-104', 200, 'Clean', 0),
-(201, 2, 'N-201', 220, 'Clean', 0), (202, 2, 'N-202', 220, 'Occupied', 0), (203, 2, 'N-203', 220, 'Clean', 0), (204, 2, 'N-204', 220, 'OOO', 0),
-(301, 3, 'N-301', 220, 'Clean', 0), (302, 3, 'N-302', 220, 'Clean', 0), (303, 3, 'N-303', 220, 'Dirty', 1), (304, 3, 'N-304', 220, 'Occupied', 0),
-(401, 4, 'N-401', 250, 'Clean', 0), (402, 4, 'N-402', 250, 'Clean', 0), (403, 4, 'N-403', 250, 'Clean', 0), (404, 4, 'N-404', 250, 'Clean', 0),
-(501, 5, 'N-501', 250, 'Clean', 0), (502, 5, 'N-502', 250, 'Occupied', 0), (503, 5, 'N-503', 250, 'Clean', 0), (504, 5, 'N-504', 250, 'Clean', 0);
+(101, 1, 'E-101', 350, 'Clean', 0), (102, 1, 'E-102', 350, 'Occupied', 0), (103, 1, 'E-103', 350, 'Clean', 0), (104, 1, 'E-104', 380, 'Dirty', 0), (105, 1, 'E-105', 380, 'Clean', 0), (106, 1, 'E-106', 400, 'Clean', 0),
+(201, 2, 'E-201', 350, 'Occupied', 0), (202, 2, 'E-202', 350, 'Clean', 0), (203, 2, 'E-203', 350, 'Clean', 0), (204, 2, 'E-204', 380, 'Occupied', 0), (205, 2, 'E-205', 380, 'Clean', 0), (206, 2, 'E-206', 400, 'Occupied', 0),
+(301, 3, 'E-301', 450, 'Clean', 0), (302, 3, 'E-302', 450, 'Clean', 0), (303, 3, 'E-303', 450, 'Dirty', 0), (304, 3, 'E-304', 480, 'Clean', 0), (305, 3, 'E-305', 480, 'Clean', 0), (306, 3, 'E-306', 500, 'Clean', 0),
+(401, 4, 'E-401', 550, 'Clean', 0), (402, 4, 'E-402', 550, 'Occupied', 0), (403, 4, 'E-403', 550, 'Clean', 0), (404, 4, 'E-404', 580, 'Clean', 0), (405, 4, 'E-405', 580, 'Clean', 0), (406, 4, 'E-406', 600, 'Clean', 0),
+(501, 5, 'E-501', 800, 'Clean', 0), (502, 5, 'E-502', 800, 'Occupied', 0), (503, 5, 'E-503', 800, 'Dirty', 0), (504, 5, 'E-504', 850, 'Clean', 0), (505, 5, 'E-505', 850, 'Occupied', 0), (506, 5, 'E-506', 1000, 'Clean', 0);
 
--- South Wing (Suites)
+-- West Wing (Floors 1-5)
 INSERT INTO room (roomId, floorId, roomNumber, baseRate, currentStatus, isSmokingRoom) VALUES
-(601, 6, 'S-101', 450, 'Clean', 0), (602, 6, 'S-102', 450, 'Occupied', 0), (603, 6, 'S-103', 450, 'Clean', 0),
-(701, 7, 'S-201', 500, 'Clean', 0), (702, 7, 'S-202', 500, 'Occupied', 0), (703, 7, 'S-203', 500, 'Dirty', 0),
-(801, 8, 'S-301', 500, 'Clean', 0), (802, 8, 'S-302', 500, 'Occupied', 0), (803, 8, 'S-303', 500, 'Clean', 0),
-(901, 9, 'S-401', 600, 'Clean', 0), (902, 9, 'S-402', 600, 'Clean', 0), (903, 9, 'S-403', 600, 'Occupied', 0),
-(1001, 10, 'S-501', 800, 'Clean', 0), (1002, 10, 'S-502', 800, 'Clean', 0);
+(601, 6, 'W-101', 350, 'Clean', 0), (602, 6, 'W-102', 350, 'Clean', 0), (603, 6, 'W-103', 350, 'Occupied', 0), (604, 6, 'W-104', 350, 'Clean', 0), (605, 6, 'W-105', 380, 'Dirty', 0), (606, 6, 'W-106', 400, 'Clean', 0),
+(701, 7, 'W-201', 350, 'Clean', 0), (702, 7, 'W-202', 350, 'Clean', 0), (703, 7, 'W-203', 350, 'Clean', 0), (704, 7, 'W-204', 380, 'Occupied', 0), (705, 7, 'W-205', 380, 'Clean', 0), (706, 7, 'W-206', 400, 'Occupied', 0),
+(801, 8, 'W-301', 450, 'Occupied', 0), (802, 8, 'W-302', 450, 'Clean', 0), (803, 8, 'W-303', 450, 'Clean', 0), (804, 8, 'W-304', 480, 'Clean', 0), (805, 8, 'W-305', 480, 'Clean', 0), (806, 8, 'W-306', 500, 'Clean', 0),
+(901, 9, 'W-401', 550, 'Clean', 0), (902, 9, 'W-402', 550, 'Clean', 0), (903, 9, 'W-403', 550, 'Occupied', 0), (904, 9, 'W-404', 580, 'Clean', 0), (905, 9, 'W-405', 580, 'Clean', 0), (906, 9, 'W-406', 600, 'Clean', 0),
+(1001, 10, 'W-501', 1200, 'Clean', 0), (1002, 10, 'W-502', 1200, 'Occupied', 0), (1003, 10, 'W-503', 1200, 'Clean', 0), (1004, 10, 'W-504', 1500, 'Dirty', 0), (1005, 10, 'W-505', 1500, 'Clean', 0), (1006, 10, 'W-506', 2000, 'Clean', 0);
 
--- East Wing (Conference)
+-- Meeting Rooms
 INSERT INTO room (roomId, floorId, roomNumber, baseRate, currentStatus, isSmokingRoom) VALUES
-(1101, 11, 'Conf-A', 1500, 'Clean', 0), (1102, 11, 'Conf-B', 1500, 'In Use', 0),
-(1201, 12, 'GrandBall', 5000, 'Clean', 0);
+(2001, 1, 'Conf-A', 2500, 'Clean', 0), (2002, 1, 'Conf-B', 2500, 'In Use', 0), (2003, 1, 'GrandBall', 8000, 'Clean', 0);
 
--- Room Functions
-INSERT INTO room_has_function (roomId, functionCode) 
-SELECT roomId, 'SLP' FROM room WHERE baseRate < 1000;
-INSERT INTO room_has_function (roomId, functionCode) 
-SELECT roomId, 'STE' FROM room WHERE baseRate BETWEEN 450 AND 800;
-INSERT INTO room_has_function (roomId, functionCode) 
-SELECT roomId, 'MTG' FROM room WHERE baseRate >= 1500;
+-- Config
+INSERT INTO room_has_function (roomId, functionCode) SELECT roomId, 'SLP' FROM room WHERE baseRate < 1000;
+INSERT INTO room_has_function (roomId, functionCode) SELECT roomId, 'STE' FROM room WHERE baseRate >= 1000 AND baseRate < 2500;
+INSERT INTO room_has_function (roomId, functionCode) SELECT roomId, 'MTG' FROM room WHERE baseRate >= 2500;
+INSERT INTO room_has_bed (roomId, bedTypeId, count) SELECT roomId, 1, 1 FROM room WHERE roomId < 2000; 
+INSERT INTO room_has_fixture (roomId, fixtureId) SELECT roomId, 1 FROM room WHERE roomId < 2000;
 
--- ==========================================
--- 3. 客户 (Parties) - 生成 50+ 个体, 10+ 公司
--- ==========================================
--- Organizations (Party 1-10)
+-- 3. 客户 (Parties) - Updated Phones
+INSERT INTO party (partyId, email, phone) VALUES (1, 'contact@tesla.com', '212-555-0101'), (2, 'info@lvmh.com', '212-555-0102'), (3, 'events@vogue.com', '212-555-0103'), (4, 'admin@harvard.edu', '617-555-0104');
+INSERT INTO organization (partyId, orgName, contactName) VALUES (1, 'Tesla Motors', 'Elon M'), (2, 'LVMH Group', 'Bernard A'), (3, 'Vogue Magazine', 'Anna W'), (4, 'Harvard University', 'Dean Smith');
+
 INSERT INTO party (partyId, email, phone) VALUES 
-(1, 'contact@techcorp.com', '555-9001'), (2, 'info@bizinc.com', '555-9002'), (3, 'sales@global.com', '555-9003'),
-(4, 'events@wedding.com', '555-9004'), (5, 'admin@school.edu', '555-9005'), (6, 'hr@finance.com', '555-9006'),
-(7, 'team@startuplab.com', '555-9007'), (8, 'ops@logistics.io', '555-9008'), (9, 'travel@agency.com', '555-9009'), (10, 'conf@organizer.org', '555-9010');
-
-INSERT INTO organization (partyId, orgName, contactName) VALUES 
-(1, 'Tech Corp', 'Mike Ross'), (2, 'Biz Solutions', 'Sarah Pal'), (3, 'Global Traders', 'Tom Cruise'),
-(4, 'Dream Weddings', 'Jane Doe'), (5, 'State University', 'Dr. Smith'), (6, 'Finance Partners', 'Mr. Gold'),
-(7, 'Startup Lab', 'Elon M'), (8, 'Fast Logistics', 'Jeff B'), (9, 'Travel Pro', 'Rick S'), (10, 'Conf Organizers', 'Lisa K');
-
--- People (Party 11-60) - Generating 50 People
-INSERT INTO party (partyId, email, phone) VALUES 
-(11, 'p1@mail.com', '555-0001'), (12, 'p2@mail.com', '555-0002'), (13, 'p3@mail.com', '555-0003'), (14, 'p4@mail.com', '555-0004'), (15, 'p5@mail.com', '555-0005'),
-(16, 'p6@mail.com', '555-0006'), (17, 'p7@mail.com', '555-0007'), (18, 'p8@mail.com', '555-0008'), (19, 'p9@mail.com', '555-0009'), (20, 'p10@mail.com', '555-0010'),
-(21, 'p11@mail.com', '555-0011'), (22, 'p12@mail.com', '555-0012'), (23, 'p13@mail.com', '555-0013'), (24, 'p14@mail.com', '555-0014'), (25, 'p15@mail.com', '555-0015'),
-(26, 'p16@mail.com', '555-0016'), (27, 'p17@mail.com', '555-0017'), (28, 'p18@mail.com', '555-0018'), (29, 'p19@mail.com', '555-0019'), (30, 'p20@mail.com', '555-0020'),
-(31, 'p21@mail.com', '555-0021'), (32, 'p22@mail.com', '555-0022'), (33, 'p23@mail.com', '555-0023'), (34, 'p24@mail.com', '555-0024'), (35, 'p25@mail.com', '555-0025'),
-(36, 'p26@mail.com', '555-0026'), (37, 'p27@mail.com', '555-0027'), (38, 'p28@mail.com', '555-0028'), (39, 'p29@mail.com', '555-0029'), (40, 'p30@mail.com', '555-0030'),
-(41, 'p31@mail.com', '555-0031'), (42, 'p32@mail.com', '555-0032'), (43, 'p33@mail.com', '555-0033'), (44, 'p34@mail.com', '555-0034'), (45, 'p35@mail.com', '555-0035'),
-(46, 'p36@mail.com', '555-0036'), (47, 'p37@mail.com', '555-0037'), (48, 'p38@mail.com', '555-0038'), (49, 'p39@mail.com', '555-0039'), (50, 'p40@mail.com', '555-0040'),
-(51, 'p41@mail.com', '555-0041'), (52, 'p42@mail.com', '555-0042'), (53, 'p43@mail.com', '555-0043'), (54, 'p44@mail.com', '555-0044'), (55, 'p45@mail.com', '555-0045'),
-(56, 'p46@mail.com', '555-0046'), (57, 'p47@mail.com', '555-0047'), (58, 'p48@mail.com', '555-0048'), (59, 'p49@mail.com', '555-0049'), (60, 'p50@mail.com', '555-0050');
+(5, 'james.bond@mi6.uk', '007-007-0007'), (6, 'tony@stark.com', '212-555-2384'), (7, 'bruce@wayne.com', '212-555-7893'), (8, 'peter@parker.com', '212-555-2388'),
+(9, 'clark@dailyplanet.com', '212-555-3853'), (10, 'diana@themyscira.com', '212-555-3784'), (11, 'natasha@shield.gov', '202-555-0111'), (12, 'steve@shield.gov', '202-555-0112'),
+(13, 'wanda@avengers.com', '212-555-0113'), (14, 'vision@avengers.com', '212-555-0114'), (15, 'thor@asgard.com', '212-555-0115'), (16, 'loki@asgard.com', '212-555-0116'),
+(17, 'stephen@strange.com', '212-555-0117'), (18, 'carol@marvel.com', '212-555-0118'), (19, 'tchalla@wakanda.gov', '212-555-0119'), (20, 'shuri@wakanda.gov', '212-555-0120'),
+(21, 'scott@lang.com', '415-555-0121'), (22, 'hope@pym.com', '415-555-0122'), (23, 'peter@quill.com', '212-555-0123'), (24, 'gamora@guardians.com', '212-555-0124'),
+(25, 'drax@guardians.com', '212-555-0125'), (26, 'rocket@guardians.com', '212-555-0126'), (27, 'groot@guardians.com', '212-555-0127'), (28, 'mantis@guardians.com', '212-555-0128'),
+(29, 'nebula@guardians.com', '212-555-0129'), (30, 'thanos@titan.com', '212-555-0130'), (31, 'harry@potter.com', '020-555-0131'), (32, 'hermione@granger.com', '020-555-0132'),
+(33, 'ron@weasley.com', '020-555-0133'), (34, 'albus@hogwarts.edu', '020-555-0134'), (35, 'severus@hogwarts.edu', '020-555-0135'), (36, 'draco@malfoy.com', '020-555-0136'),
+(37, 'luna@lovegood.com', '020-555-0137'), (38, 'neville@longbottom.com', '020-555-0138'), (39, 'ginny@weasley.com', '020-555-0139'), (40, 'sirius@black.com', '020-555-0140'),
+(41, 'remus@lupin.com', '020-555-0141'), (42, 'rubeus@hagrid.com', '020-555-0142'), (43, 'minerva@mcgonagall.com', '020-555-0143'), (44, 'tom@riddle.com', '020-555-0144'),
+(45, 'frodo@baggins.com', '020-555-0145'), (46, 'sam@gamgee.com', '020-555-0146'), (47, 'gandalf@grey.com', '020-555-0147'), (48, 'aragorn@gondor.gov', '020-555-0148'),
+(49, 'legolas@mirkwood.com', '020-555-0149'), (50, 'gimli@erebor.com', '020-555-0150'), (51, 'boromir@gondor.gov', '020-555-0151'), (52, 'faramir@gondor.gov', '020-555-0152'),
+(53, 'arwen@rivendell.com', '020-555-0153'), (54, 'galadriel@lorien.com', '020-555-0154'), (55, 'elrond@rivendell.com', '020-555-0155'), (56, 'bilbo@baggins.com', '020-555-0156'),
+(57, 'gollum@cave.com', '020-555-0157'), (58, 'sauron@mordor.gov', '020-555-0158'), (59, 'saruman@isengard.com', '020-555-0159'), (60, 'luke@skywalker.com', '212-555-0160'),
+(61, 'leia@organa.gov', '212-555-0161'), (62, 'han@solo.com', '212-555-0162'), (63, 'chewbacca@wookie.com', '212-555-0163'), (64, 'obiwan@kenobi.com', '212-555-0164'),
+(65, 'anakin@skywalker.com', '212-555-0165'), (66, 'yoda@jedi.com', '212-555-0166'), (67, 'mace@windu.com', '212-555-0167'), (68, 'padme@amidala.gov', '212-555-0168'),
+(69, 'palpatine@empire.gov', '212-555-0169'), (70, 'maul@sith.com', '212-555-0170'), (71, 'dooku@sith.com', '212-555-0171'), (72, 'general@grievous.com', '212-555-0172'),
+(73, 'boba@fett.com', '212-555-0173'), (74, 'din@djarin.com', '212-555-0174'), (75, 'grogu@jedi.com', '212-555-0175'), (76, 'ahsoka@tano.com', '212-555-0176'),
+(77, 'rex@clone.com', '212-555-0177'), (78, 'cody@clone.com', '212-555-0178'), (79, 'wolffe@clone.com', '212-555-0179'), (80, 'gregor@clone.com', '212-555-0180'),
+(81, 'echo@clone.com', '212-555-0181'), (82, 'tech@clone.com', '212-555-0182'), (83, 'wrecker@clone.com', '212-555-0183'), (84, 'hunter@clone.com', '212-555-0184'),
+(85, 'crosshair@clone.com', '212-555-0185'), (86, 'omega@clone.com', '212-555-0186'), (87, 'hera@syndulla.com', '212-555-0187'), (88, 'kanan@jarrus.com', '212-555-0188'),
+(89, 'ezra@bridger.com', '212-555-0189'), (90, 'sabine@wren.com', '212-555-0190'), (91, 'zeb@orrelios.com', '212-555-0191'), (92, 'chopper@droid.com', '212-555-0192'),
+(93, 'grand@thrawn.com', '212-555-0193'), (94, 'jack@sparrow.com', '305-555-0194'), (95, 'will@turner.com', '305-555-0195'), (96, 'elizabeth@swann.com', '305-555-0196'),
+(97, 'hector@barbossa.com', '305-555-0197'), (98, 'davy@jones.com', '305-555-0198'), (99, 'james@norrington.com', '305-555-0199'), (100, 'josh@gibbs.com', '305-555-0200');
 
 INSERT INTO person (partyId, firstName, lastName) VALUES
-(11, 'Alice', 'Smith'), (12, 'Bob', 'Jones'), (13, 'Charlie', 'Brown'), (14, 'David', 'Davis'), (15, 'Eve', 'Evans'),
-(16, 'Frank', 'Frank'), (17, 'Grace', 'Green'), (18, 'Henry', 'Hill'), (19, 'Ivy', 'Irwin'), (20, 'Jack', 'Jackson'),
-(21, 'Kevin', 'King'), (22, 'Laura', 'Lee'), (23, 'Mike', 'Miller'), (24, 'Nancy', 'Nelson'), (25, 'Oscar', 'Owens'),
-(26, 'Paul', 'Parker'), (27, 'Quinn', 'Quick'), (28, 'Rachel', 'Rose'), (29, 'Steve', 'Scott'), (30, 'Tom', 'Turner'),
-(31, 'Uma', 'Underwood'), (32, 'Victor', 'Vance'), (33, 'Wendy', 'West'), (34, 'Xavier', 'X'), (35, 'Yvonne', 'Young'),
-(36, 'Zach', 'Zimmerman'), (37, 'Adam', 'Anderson'), (38, 'Brian', 'Baker'), (39, 'Chris', 'Clark'), (40, 'Dan', 'Drake'),
-(41, 'Eric', 'Edwards'), (42, 'Fred', 'Fox'), (43, 'George', 'Gray'), (44, 'Harry', 'Harris'), (45, 'Ian', 'Ingram'),
-(46, 'John', 'Johnson'), (47, 'Karl', 'Kelly'), (48, 'Larry', 'Lewis'), (49, 'Mary', 'Moore'), (50, 'Nick', 'Nolan'),
-(51, 'Oliver', 'Olsen'), (52, 'Peter', 'Peterson'), (53, 'Queen', 'Quincy'), (54, 'Robert', 'Roberts'), (55, 'Sam', 'Sanders'),
-(56, 'Tim', 'Taylor'), (57, 'Ursula', 'Upton'), (58, 'Vicky', 'Vincent'), (59, 'Will', 'Walker'), (60, 'Xena', 'Xylophone');
+(5, 'James', 'Bond'), (6, 'Tony', 'Stark'), (7, 'Bruce', 'Wayne'), (8, 'Peter', 'Parker'), (9, 'Clark', 'Kent'), (10, 'Diana', 'Prince'), (11, 'Natasha', 'Romanoff'), (12, 'Steve', 'Rogers'),
+(13, 'Wanda', 'Maximoff'), (14, 'Vision', 'Android'), (15, 'Thor', 'Odinson'), (16, 'Loki', 'Laufeyson'),
+(17, 'Stephen', 'Strange'), (18, 'Carol', 'Danvers'), (19, 'TChalla', 'Udaku'), (20, 'Shuri', 'Udaku'),
+(21, 'Scott', 'Lang'), (22, 'Hope', 'VanDyne'), (23, 'Peter', 'Quill'), (24, 'Gamora', 'Zen'),
+(25, 'Drax', 'Destroyer'), (26, 'Rocket', 'Raccoon'), (27, 'Groot', 'Tree'), (28, 'Mantis', 'Alien'),
+(29, 'Nebula', 'Cyborg'), (30, 'Thanos', 'Titan'), (31, 'Harry', 'Potter'), (32, 'Hermione', 'Granger'),
+(33, 'Ron', 'Weasley'), (34, 'Albus', 'Dumbledore'), (35, 'Severus', 'Snape'), (36, 'Draco', 'Malfoy'),
+(37, 'Luna', 'Lovegood'), (38, 'Neville', 'Longbottom'), (39, 'Ginny', 'Weasley'), (40, 'Sirius', 'Black'),
+(41, 'Remus', 'Lupin'), (42, 'Rubeus', 'Hagrid'), (43, 'Minerva', 'McGonagall'), (44, 'Tom', 'Riddle'),
+(45, 'Frodo', 'Baggins'), (46, 'Samwise', 'Gamgee'), (47, 'Gandalf', 'Grey'), (48, 'Aragorn', 'Elessar'),
+(49, 'Legolas', 'Greenleaf'), (50, 'Gimli', 'Gloin'), (51, 'Boromir', 'Denethor'), (52, 'Faramir', 'Denethor'),
+(53, 'Arwen', 'Undomiel'), (54, 'Galadriel', 'Lady'), (55, 'Elrond', 'Halfelven'), (56, 'Bilbo', 'Baggins'),
+(57, 'Gollum', 'Smeagol'), (58, 'Sauron', 'DarkLord'), (59, 'Saruman', 'White'), (60, 'Luke', 'Skywalker'),
+(61, 'Leia', 'Organa'), (62, 'Han', 'Solo'), (63, 'Chewbacca', 'Wookie'), (64, 'ObiWan', 'Kenobi'),
+(65, 'Anakin', 'Skywalker'), (66, 'Yoda', 'Master'), (67, 'Mace', 'Windu'), (68, 'Padme', 'Amidala'),
+(69, 'Sheev', 'Palpatine'), (70, 'Darth', 'Maul'), (71, 'Count', 'Dooku'), (72, 'General', 'Grievous'),
+(73, 'Boba', 'Fett'), (74, 'Din', 'Djarin'), (75, 'Grogu', 'Child'), (76, 'Ahsoka', 'Tano'),
+(77, 'Rex', 'Captain'), (78, 'Cody', 'Commander'), (79, 'Wolffe', 'Commander'), (80, 'Gregor', 'Commando'),
+(81, 'Echo', 'ARC'), (82, 'Tech', 'BadBatch'), (83, 'Wrecker', 'BadBatch'), (84, 'Hunter', 'BadBatch'),
+(85, 'Crosshair', 'BadBatch'), (86, 'Omega', 'Clone'), (87, 'Hera', 'Syndulla'), (88, 'Kanan', 'Jarrus'),
+(89, 'Ezra', 'Bridger'), (90, 'Sabine', 'Wren'), (91, 'Zeb', 'Orrelios'), (92, 'Chopper', 'C110P'),
+(93, 'Grand', 'Thrawn'), (94, 'Jack', 'Sparrow'), (95, 'Will', 'Turner'), (96, 'Elizabeth', 'Swann'),
+(97, 'Hector', 'Barbossa'), (98, 'Davy', 'Jones'), (99, 'James', 'Norrington'), (100, 'Joshamee', 'Gibbs');
 
--- ==========================================
--- 4. 预订 (Reservations) - 生成 150+ 记录 (Q1, Q2, Q3, Q4)
--- ==========================================
--- Batch 1: Completed Stays (Jan - Oct 2025)
-INSERT INTO reservation (partyId, startDate, endDate, status) VALUES 
-(1, '2025-01-05', '2025-01-10', 'CheckedOut'), (11, '2025-01-12', '2025-01-14', 'CheckedOut'),
-(12, '2025-01-15', '2025-01-20', 'CheckedOut'), (2, '2025-02-01', '2025-02-05', 'CheckedOut'),
-(13, '2025-02-10', '2025-02-12', 'CheckedOut'), (14, '2025-02-14', '2025-02-18', 'CheckedOut'),
-(3, '2025-03-01', '2025-03-05', 'CheckedOut'), (15, '2025-03-10', '2025-03-15', 'CheckedOut'),
-(16, '2025-03-20', '2025-03-22', 'CheckedOut'), (17, '2025-04-01', '2025-04-05', 'CheckedOut'),
-(4, '2025-04-10', '2025-04-12', 'CheckedOut'), (18, '2025-04-15', '2025-04-20', 'CheckedOut'),
-(19, '2025-05-01', '2025-05-05', 'CheckedOut'), (20, '2025-05-10', '2025-05-15', 'CheckedOut'),
-(5, '2025-06-01', '2025-06-10', 'CheckedOut'), (21, '2025-06-15', '2025-06-20', 'CheckedOut'),
-(22, '2025-07-01', '2025-07-05', 'CheckedOut'), (23, '2025-07-10', '2025-07-12', 'CheckedOut'),
-(6, '2025-08-01', '2025-08-05', 'CheckedOut'), (24, '2025-08-10', '2025-08-15', 'CheckedOut'),
-(25, '2025-09-01', '2025-09-05', 'CheckedOut'), (26, '2025-09-10', '2025-09-12', 'CheckedOut'),
-(7, '2025-10-01', '2025-10-05', 'CheckedOut'), (27, '2025-10-10', '2025-10-15', 'CheckedOut'),
-(28, '2025-10-20', '2025-10-22', 'CheckedOut'), (29, '2025-10-25', '2025-10-28', 'CheckedOut');
-
--- Batch 2: Current In-House (Nov 2025)
-INSERT INTO reservation (partyId, startDate, endDate, status) VALUES 
-(30, '2025-11-20', '2025-11-26', 'CheckedIn'), (31, '2025-11-21', '2025-11-24', 'CheckedIn'),
-(8, '2025-11-22', '2025-11-28', 'CheckedIn'), (32, '2025-11-23', '2025-11-25', 'CheckedIn'),
-(33, '2025-11-24', '2025-11-29', 'CheckedIn'), (34, '2025-11-25', '2025-11-27', 'CheckedIn');
-
--- Batch 3: Future Bookings (Dec 2025 - Jan 2026)
-INSERT INTO reservation (partyId, startDate, endDate, status) VALUES 
-(9, '2025-12-01', '2025-12-05', 'Booked'), (35, '2025-12-10', '2025-12-15', 'Booked'),
-(36, '2025-12-20', '2025-12-26', 'Booked'), (10, '2025-12-24', '2025-12-31', 'Booked'),
-(37, '2026-01-01', '2026-01-05', 'Booked'), (38, '2026-01-10', '2026-01-15', 'Booked');
-
--- Generate more random past reservations to hit 100+
+-- 4. 预订 (Reservations) - 200+ Records
+-- Past (100)
 INSERT INTO reservation (partyId, startDate, endDate, status) 
-SELECT partyId, '2025-01-01', '2025-01-03', 'CheckedOut' FROM party WHERE partyId > 40;
+SELECT partyId, '2025-01-01', '2025-01-05', 'CheckedOut' FROM party WHERE partyId BETWEEN 5 AND 55;
+INSERT INTO reservation (partyId, startDate, endDate, status) 
+SELECT partyId, '2025-02-10', '2025-02-15', 'CheckedOut' FROM party WHERE partyId BETWEEN 56 AND 100;
 
--- ==========================================
--- 5. 账单与消费 (Charges)
--- ==========================================
--- Create accounts for all parties
+-- Current (50)
+INSERT INTO reservation (partyId, startDate, endDate, status) 
+SELECT partyId, '2025-11-20', '2025-11-28', 'CheckedIn' FROM party WHERE partyId BETWEEN 5 AND 30;
+
+-- Future (50)
+INSERT INTO reservation (partyId, startDate, endDate, status) 
+SELECT partyId, '2025-12-24', '2025-12-30', 'Booked' FROM party WHERE partyId BETWEEN 31 AND 60;
+
+-- 5. Events & Billing
+INSERT INTO event (eventId, name, description, startDate, endDate, partyId, roomId) VALUES
+(1, 'Tesla Tech Day', 'AI & Robotics Showcase', '2025-12-01', '2025-12-01', 1, 2001),
+(2, 'Vogue Gala', 'Fashion Week Opening', '2025-12-05', '2025-12-05', 3, 2003),
+(3, 'Harvard Alumni', 'Networking Dinner', '2025-12-10', '2025-12-10', 4, 2001),
+(4, 'Stark Expo', 'Clean Energy Summit', '2025-12-15', '2025-12-20', 6, 2002),
+(5, 'Wayne Charity', 'Gotham Fundraiser', '2025-12-25', '2025-12-25', 7, 2003),
+(6, 'LVMH Board', 'Annual Review', '2025-11-30', '2025-11-30', 2, 2001),
+(7, 'Avengers Briefing', 'Strategic Planning', '2025-12-02', '2025-12-03', 6, 2002),
+(8, 'Hogwarts Reunion', 'Magic & Mystery', '2025-12-24', '2025-12-26', 31, 2003),
+(9, 'Jedi Council', 'Peace Talks', '2026-01-10', '2026-01-12', 66, 2002),
+(10, 'Clone Force 99', 'Tactical Drill', '2025-11-28', '2025-11-29', 84, 2001);
+
+-- Billing
 INSERT INTO billing_account (accountId, partyId, status) SELECT partyId, partyId, 'Open' FROM party;
-
--- Insert Random Room Charges for first 50 accounts
-INSERT INTO charge (accountId, serviceCode, amount, dateIncurred)
-SELECT partyId, 'ROOM', 200 + (partyId * 2), '2025-01-01' FROM party WHERE partyId <= 50;
-
-INSERT INTO charge (accountId, serviceCode, amount, dateIncurred)
-SELECT partyId, 'FOOD', 50 + partyId, '2025-01-02' FROM party WHERE partyId <= 30;
-
-INSERT INTO charge (accountId, serviceCode, amount, dateIncurred)
-SELECT partyId, 'SPA', 120, '2025-01-03' FROM party WHERE partyId BETWEEN 10 AND 20;
-
-INSERT INTO charge (accountId, serviceCode, amount, dateIncurred)
-SELECT partyId, 'EVENT', 1000, '2025-02-15' FROM party WHERE partyId <= 5;
+INSERT INTO charge (accountId, serviceCode, amount, dateIncurred) SELECT partyId, 'ROOM', 500, '2025-01-01' FROM party;
