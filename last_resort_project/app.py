@@ -144,29 +144,60 @@ def room_detail(room_id):
     return render_template('room_detail.html', room=room, beds=beds, fixtures=fixtures, 
                            adjacencies=adjacencies, maintenance=maintenance, history=history,
                            active_page='rooms')
-
 @app.route('/reservations')
 def reservations():
     db = get_db()
+
+    # 获取搜索 + 排序参数（兼容 order 和 direction）
     search_query = request.args.get('search', '')
-    sql = """
-        SELECT r.resvId, r.startDate, r.endDate, r.status,
-               COALESCE(pe.firstName || ' ' || pe.lastName, o.orgName) as displayName,
-               CASE WHEN pe.partyId IS NOT NULL THEN 'Person' ELSE 'Org' END as partyType
+    sort = request.args.get('sort', 'startDate')   # 默认按开始日期排序
+    # 兼容两种前端参数名：order 或 direction
+    direction = request.args.get('direction', request.args.get('order', 'desc')).lower()
+
+    # 允许排序的列（为了安全） -- key 是前端会发的 sort 值
+    allowed_sort_cols = {
+        "resvId": "r.resvId",
+        "startDate": "r.startDate",
+        "endDate": "r.endDate",
+        "status": "r.status",
+        "displayName": "displayName"
+    }
+
+    # 如果用户乱写排序字段，fallback 到 startDate
+    sort_col = allowed_sort_cols.get(sort, "r.startDate")
+
+    # direction 安全检查
+    direction = "ASC" if direction == "asc" else "DESC"
+
+    sql = f"""
+        SELECT 
+            r.resvId, r.startDate, r.endDate, r.status,
+            COALESCE(pe.firstName || ' ' || pe.lastName, o.orgName) as displayName,
+            CASE WHEN pe.partyId IS NOT NULL THEN 'Person' ELSE 'Org' END as partyType
         FROM reservation r
         JOIN party p ON r.partyId = p.partyId
         LEFT JOIN person pe ON p.partyId = pe.partyId
         LEFT JOIN organization o ON p.partyId = o.partyId
         WHERE 1=1
     """
+
     params = []
     if search_query:
         sql += " AND (pe.firstName LIKE ? OR pe.lastName LIKE ? OR o.orgName LIKE ?)"
         s = f'%{search_query}%'
         params.extend([s, s, s])
-    sql += " ORDER BY r.startDate DESC"
+
+    # 排序
+    sql += f" ORDER BY {sort_col} {direction}"
+
     reservations = db.execute(sql, params).fetchall()
-    return render_template('reservations.html', reservations=reservations, active_page='reservations')
+
+    return render_template(
+        'reservations.html',
+        reservations=reservations,
+        active_page='reservations'
+    )
+
 
 @app.route('/reservations/new', methods=['GET', 'POST'])
 def new_reservation():
@@ -220,23 +251,62 @@ def checkin(resv_id):
 @app.route('/parties')
 def parties():
     db = get_db()
+
+    # --- 1) 获取 search, sort, order 参数 ---
     search_query = request.args.get('search', '')
-    sql = """
+    sort_col = request.args.get('sort', 'partyId')   # 默认按 ID
+    order = request.args.get('order', 'asc').lower() # asc / desc
+
+    # --- 2) 限制可排序字段（防止 SQL 注入）---
+    allowed_sort_cols = {
+        'partyId': 'p.partyId',
+        'displayName': 'displayName',
+        'type': 'type',
+        'email': 'p.email',
+        'phone': 'p.phone'
+    }
+    sort_sql = allowed_sort_cols.get(sort_col, 'p.partyId')
+
+    # --- 3) 限制 order ---
+    if order not in ['asc', 'desc']:
+        order = 'asc'
+
+    # --- 4) 主 SQL ---
+    sql = f"""
         SELECT p.partyId, p.email, p.phone,
-               COALESCE(pe.firstName || ' ' || pe.lastName, o.orgName) as displayName,
-               CASE WHEN pe.partyId IS NOT NULL THEN 'Person' ELSE 'Organization' END as type
+               COALESCE(pe.firstName || ' ' || pe.lastName, o.orgName) AS displayName,
+               CASE WHEN pe.partyId IS NOT NULL THEN 'Person' ELSE 'Organization' END AS type
         FROM party p
         LEFT JOIN person pe ON p.partyId = pe.partyId
         LEFT JOIN organization o ON p.partyId = o.partyId
         WHERE 1=1
     """
+
+    # --- 5) search 部分 ---
     params = []
     if search_query:
-        sql += " AND (pe.firstName LIKE ? OR pe.lastName LIKE ? OR o.orgName LIKE ?)"
+        sql += """ 
+            AND (
+                pe.firstName LIKE ? 
+                OR pe.lastName LIKE ? 
+                OR o.orgName LIKE ?
+            )
+        """
         s = f'%{search_query}%'
         params.extend([s, s, s])
+
+    # --- 6) 排序部分 ---
+    sql += f" ORDER BY {sort_sql} {order}"
+
+    # --- 7) 执行查询 ---
     parties_list = db.execute(sql, params).fetchall()
-    return render_template('parties.html', parties=parties_list, active_page='parties')
+
+    return render_template(
+        'parties.html',
+        parties=parties_list,
+        active_page='parties'
+    )
+
 
 @app.route('/events')
 def events():

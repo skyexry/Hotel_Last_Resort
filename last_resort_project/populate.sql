@@ -1,22 +1,22 @@
 -- checked: Phone numbers updated to 10-digit format
 -- ==========================================
--- 1. 基础配置
+-- 1. basic
 INSERT INTO hotel (hotelId, name) VALUES (1, 'Last Resort Hotel');
 INSERT INTO building (buildingId, hotelId, name) VALUES (1, 1, 'The Manor'), (2, 1, 'Ocean Pavilion');
 INSERT INTO wing (wingId, buildingId, wingName) VALUES (1, 1, 'East Wing'), (2, 1, 'West Wing'), (3, 2, 'Villa Wing');
 
--- 生成 5 层楼
+-- five floors
 INSERT INTO floor (floorId, wingId, floorNo) VALUES 
 (1,1,1), (2,1,2), (3,1,3), (4,1,4), (5,1,5), 
 (6,2,1), (7,2,2), (8,2,3), (9,2,4), (10,2,5); 
 
--- 基础类型
+-- room type
 INSERT INTO room_function VALUES ('SLP', 'Guest Room'), ('MTG', 'Meeting Salon'), ('STE', 'Grand Suite');
 INSERT INTO bed_type VALUES (1, 'King', 2), (2, 'Queen', 2), (3, 'Twin', 1), (4, 'California King', 2);
 INSERT INTO service_type VALUES ('ROOM', 'Room Charge'), ('FOOD', 'Dining'), ('SPA', 'Wellness'), ('EVENT', 'Banquet'), ('MISC', 'Concierge');
 INSERT INTO room_fixture (fixtureId, name) VALUES (1, 'OLED TV'), (2, 'Crystal Bar'), (3, 'Marble Bath'), (4, 'Terrace'), (5, 'Workstation');
 
--- 2. 房间 (60+)
+-- 2. room (60+)
 -- East Wing (Floors 1-5)
 INSERT INTO room (roomId, floorId, roomNumber, baseRate, currentStatus, isSmokingRoom) VALUES
 (101, 1, 'E-101', 350, 'Clean', 0), (102, 1, 'E-102', 350, 'Occupied', 0), (103, 1, 'E-103', 350, 'Clean', 0), (104, 1, 'E-104', 380, 'Dirty', 0), (105, 1, 'E-105', 380, 'Clean', 0), (106, 1, 'E-106', 400, 'Clean', 0),
@@ -44,7 +44,7 @@ INSERT INTO room_has_function (roomId, functionCode) SELECT roomId, 'MTG' FROM r
 INSERT INTO room_has_bed (roomId, bedTypeId, count) SELECT roomId, 1, 1 FROM room WHERE roomId < 2000; 
 INSERT INTO room_has_fixture (roomId, fixtureId) SELECT roomId, 1 FROM room WHERE roomId < 2000;
 
--- 3. 客户 (Parties) - Updated Phones
+-- 3.  (Parties) - Updated Phones
 INSERT INTO party (partyId, email, phone) VALUES (1, 'contact@tesla.com', '212-555-0101'), (2, 'info@lvmh.com', '212-555-0102'), (3, 'events@vogue.com', '212-555-0103'), (4, 'admin@harvard.edu', '617-555-0104');
 INSERT INTO organization (partyId, orgName, contactName) VALUES (1, 'Tesla Motors', 'Elon M'), (2, 'LVMH Group', 'Bernard A'), (3, 'Vogue Magazine', 'Anna W'), (4, 'Harvard University', 'Dean Smith');
 

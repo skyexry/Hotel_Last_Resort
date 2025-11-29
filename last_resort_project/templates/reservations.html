@@ -1,4 +1,7 @@
 <!-- checked: Reservations list verified -->
+
+{% from "_components/sortable.html" import sortable %}
+
 {% extends "base.html" %}
 {% block content %}
 <div class="row align-items-center mb-4">
@@ -21,14 +24,26 @@
     <table class="table table-hover align-middle mb-0">
         <thead class="table-light">
             <tr>
-                <th class="text-nowrap" style="width: 1%;">ID</th>
-                <th>Guest / Party</th>
-                <th class="text-nowrap">Check In</th>
-                <th class="text-nowrap">Check Out</th>
-                <th class="text-nowrap" style="width: 1%;">Status</th>
-                <th class="text-nowrap" style="width: 1%;">Action</th>
+                <th class="text-nowrap" style="width: 1%;">
+                    {{ sortable("ID", "reservationId") }}
+                </th>
+                <th>
+                    {{ sortable("Guest / Party", "displayName") }}
+                </th>
+                <th class="text-nowrap">
+                    {{ sortable("Check In", "checkIn") }}
+                </th>
+                <th class="text-nowrap">
+                    {{ sortable("Check Out", "checkOut") }}
+                </th>
+                <th class="text-nowrap" style="width: 1%;">
+                    {{ sortable("Status", "status") }}
+                </th>
+                <th class="text-nowrap" style="width: 1%;">
+                    Action
+                </th>
             </tr>
-        </thead>
+        </thead>        
         <tbody>
             {% for r in reservations %}
             <tr>

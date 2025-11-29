@@ -1,6 +1,11 @@
 <!-- checked: Parties list verified -->
+
+{% from "_components/sortable.html" import sortable %}
+
 {% extends "base.html" %}
 {% block content %}
+
+
 <div class="row align-items-center mb-4">
     <div class="col-md-5">
         <h2>Guests & Parties <small class="text-muted">({{ parties|length }})</small></h2>
@@ -20,11 +25,21 @@
     <table class="table table-hover mb-0">
         <thead class="table-light">
             <tr>
-                <th class="text-nowrap" style="width: 1%;">ID</th>
-                <th>Name / Org</th>
-                <th class="text-nowrap" style="width: 1%;">Type</th>
-                <th>Email</th>
-                <th class="text-nowrap">Phone</th>
+                <th class="text-nowrap" style="width: 1%;">
+                    {{ sortable('partyId', 'ID') }}
+                </th>
+                <th>
+                    {{ sortable('displayName', 'Name / Org') }}
+                </th>
+                <th class="text-nowrap" style="width: 1%;">
+                    {{ sortable('type', 'Type') }}
+                </th>
+                <th>
+                    {{ sortable('email', 'Email') }}
+                </th>
+                <th class="text-nowrap">
+                    {{ sortable('phone', 'Phone') }}
+                </th>
             </tr>
         </thead>
         <tbody>
