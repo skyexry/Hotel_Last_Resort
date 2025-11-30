@@ -1,6 +1,11 @@
 -- checked: Phone numbers updated to 10-digit format
 -- ==========================================
 -- 1. basic
+
+WITH const AS (
+    SELECT date('2025-11-29') AS report_date
+)
+
 INSERT INTO hotel (hotelId, name) VALUES (1, 'Last Resort Hotel');
 INSERT INTO building (buildingId, hotelId, name) VALUES (1, 1, 'The Manor'), (2, 1, 'Ocean Pavilion');
 INSERT INTO wing (wingId, buildingId, wingName) VALUES (1, 1, 'East Wing'), (2, 1, 'West Wing'), (3, 2, 'Villa Wing');
@@ -101,18 +106,83 @@ INSERT INTO person (partyId, firstName, lastName) VALUES
 
 -- 4. 预订 (Reservations) - 200+ Records
 -- Past (100)
-INSERT INTO reservation (partyId, startDate, endDate, status) 
-SELECT partyId, '2025-01-01', '2025-01-05', 'CheckedOut' FROM party WHERE partyId BETWEEN 5 AND 55;
-INSERT INTO reservation (partyId, startDate, endDate, status) 
-SELECT partyId, '2025-02-10', '2025-02-15', 'CheckedOut' FROM party WHERE partyId BETWEEN 56 AND 100;
+-- INSERT INTO reservation (partyId, startDate, endDate, status) 
+-- SELECT partyId, '2025-08-01', '2025-01-09', 'CheckedOut' FROM party WHERE partyId BETWEEN 5 AND 55;
+-- INSERT INTO reservation (partyId, startDate, endDate, status) 
+-- SELECT partyId, '2025-09-10', '2025-09-15', 'CheckedOut' FROM party WHERE partyId BETWEEN 56 AND 100;
 
--- Current (50)
-INSERT INTO reservation (partyId, startDate, endDate, status) 
-SELECT partyId, '2025-11-20', '2025-11-28', 'CheckedIn' FROM party WHERE partyId BETWEEN 5 AND 30;
+-- -- Current (50)
+-- INSERT INTO reservation (partyId, startDate, endDate, status) 
+-- SELECT partyId, '2025-11-20', '2025-11-28', 'CheckedIn' FROM party WHERE partyId BETWEEN 5 AND 30;
 
--- Future (50)
-INSERT INTO reservation (partyId, startDate, endDate, status) 
-SELECT partyId, '2025-12-24', '2025-12-30', 'Booked' FROM party WHERE partyId BETWEEN 31 AND 60;
+-- -- Future (50)
+-- INSERT INTO reservation (partyId, startDate, endDate, status) 
+-- SELECT partyId, '2025-12-24', '2025-12-30', 'Booked' FROM party WHERE partyId BETWEEN 31 AND 60;
+
+-- 假设当前查看日期（Today's Date）是 '2025-11-25'
+-- 目标：生成 200 条数据，partyId (1-75)， startDate (2025-09-01 到 2026-01-01)， stay_days (3-10)
+
+-- 假设 reservation 表结构：
+-- reservation(partyId INT, startDate DATETIME, endDate DATETIME, status NVARCHAR(20))
+
+WITH seq AS (
+    SELECT 1 AS n
+    UNION ALL
+    SELECT n + 1 FROM seq WHERE n < 200
+)
+INSERT INTO reservation (partyId, startDate, endDate, status)
+SELECT
+    -- 随机选择 partyId 1~75
+    (ABS(CHECKSUM(NEWID())) % 75) + 1 AS partyId,
+
+    -- 随机 startDate: 2025-09-01 到 2025-12-31
+    DATEADD(
+        day,
+        ROUND(DATEDIFF(day, '2025-09-01', '2025-12-31') * RAND(CHECKSUM(NEWID())), 0),
+        '2025-09-01'
+    ) AS startDate,
+
+    -- endDate = startDate + 随机停留天数 3~10
+    DATEADD(
+        day,
+        (ABS(CHECKSUM(NEWID())) % 8) + 3,
+        DATEADD(
+            day,
+            ROUND(DATEDIFF(day, '2025-09-01', '2025-12-31') * RAND(CHECKSUM(NEWID())), 0),
+            '2025-09-01'
+        )
+    ) AS endDate,
+
+    -- 状态判断
+    CASE
+        WHEN GETDATE() < DATEADD(
+                day,
+                ROUND(DATEDIFF(day, '2025-09-01', '2025-12-31') * RAND(CHECKSUM(NEWID())), 0),
+                '2025-09-01'
+             )
+        THEN 'Booked'
+        WHEN GETDATE() BETWEEN 
+             DATEADD(
+                day,
+                ROUND(DATEDIFF(day, '2025-09-01', '2025-12-31') * RAND(CHECKSUM(NEWID())), 0),
+                '2025-09-01'
+             )
+             AND 
+             DATEADD(
+                day,
+                (ABS(CHECKSUM(NEWID())) % 8) + 3,
+                DATEADD(
+                    day,
+                    ROUND(DATEDIFF(day, '2025-09-01', '2025-12-31') * RAND(CHECKSUM(NEWID())), 0),
+                    '2025-09-01'
+                )
+             )
+        THEN 'CheckedIn'
+        ELSE 'CheckedOut'
+    END AS status
+FROM seq
+OPTION (MAXRECURSION 0);
+
 
 -- 5. Events & Billing
 INSERT INTO event (eventId, name, description, startDate, endDate, partyId, roomId) VALUES
@@ -129,4 +199,12 @@ INSERT INTO event (eventId, name, description, startDate, endDate, partyId, room
 
 -- Billing
 INSERT INTO billing_account (accountId, partyId, status) SELECT partyId, partyId, 'Open' FROM party;
-INSERT INTO charge (accountId, serviceCode, amount, dateIncurred) SELECT partyId, 'ROOM', 500, '2025-01-01' FROM party;
+INSERT INTO charge (accountId, serviceCode, amount, dateIncurred)
+SELECT
+    b.accountId,
+    'ROOM',
+    r.baseRate * (julianday(res.endDate) - julianday(res.startDate)) AS amount,
+    res.startDate AS dateIncurred
+FROM reservation res
+JOIN billing_account b ON b.partyId = res.partyId
+JOIN room r ON r.roomId = ((res.partyId - 1) % (SELECT COUNT(*) FROM room)) + 1;

@@ -3,7 +3,9 @@ import os
 from flask import Flask, render_template, request, redirect, url_for, g
 
 app = Flask(__name__)
-DATABASE = 'hotel.db'
+DATABASE = os.path.join(app.root_path, 'hotel1.db')
+
+# last_resort_
 
 def get_db():
     db = getattr(g, '_database', None)
@@ -19,15 +21,18 @@ def close_connection(exception):
         db.close()
 
 def init_db():
-    if not os.path.exists(DATABASE):
-        with app.app_context():
-            db = get_db()
-            with open('schema.sql', mode='r') as f:
-                db.cursor().executescript(f.read())
-            with open('populate.sql', mode='r') as f:
-                db.cursor().executescript(f.read())
-            db.commit()
-            print("Database initialized.")
+    if os.path.exists(DATABASE):
+        os.remove(DATABASE)
+
+    with app.app_context():
+        db = get_db()
+        with open('schema.sql', mode='r') as f:
+            db.executescript(f.read())
+        with open('populate.sql', mode='r') as f:
+            db.executescript(f.read())
+        db.commit()
+        print("Database initialized.")
+        print("Using DB:", DATABASE)
 
 @app.route('/')
 def dashboard():
@@ -144,6 +149,7 @@ def room_detail(room_id):
     return render_template('room_detail.html', room=room, beds=beds, fixtures=fixtures, 
                            adjacencies=adjacencies, maintenance=maintenance, history=history,
                            active_page='rooms')
+
 @app.route('/reservations')
 def reservations():
     db = get_db()
@@ -338,15 +344,19 @@ def billing():
 def reports():
     db = get_db()
     report_revenue = db.execute("""
-        SELECT COALESCE(pe.firstName || ' ' || pe.lastName, o.orgName) as partyName,
-               SUM(c.amount) as totalSpent,
-               COUNT(DISTINCT c.stayId) as stays
-        FROM billing_account b
-        JOIN charge c ON b.accountId = c.accountId
-        JOIN party p ON b.partyId = p.partyId
-        LEFT JOIN person pe ON p.partyId = pe.partyId
-        LEFT JOIN organization o ON p.partyId = o.partyId
-        GROUP BY partyName ORDER BY totalSpent DESC LIMIT 10
+        SELECT
+    COALESCE(pe.firstName || ' ' || pe.lastName, o.orgName) AS partyName,
+    COUNT(DISTINCT r.resvId) AS stays,
+    SUM(c.amount) AS totalSpent
+FROM party p
+LEFT JOIN person pe ON p.partyId = pe.partyId
+LEFT JOIN organization o ON p.partyId = o.partyId
+LEFT JOIN billing_account b ON b.partyId = p.partyId
+LEFT JOIN charge c ON c.accountId = b.accountId
+LEFT JOIN reservation r ON r.partyId = p.partyId
+GROUP BY partyName
+ORDER BY totalSpent DESC
+LIMIT 10;
     """).fetchall()
     
     report_util = db.execute("""
