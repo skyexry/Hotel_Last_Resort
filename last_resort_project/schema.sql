@@ -126,9 +126,11 @@ CREATE TABLE reservation (
     partyId INTEGER, 
     dateCreated DATETIME DEFAULT CURRENT_TIMESTAMP,
     startDate DATE,
+    roomId INTEGER,
     endDate DATE,
     status TEXT, 
-    FOREIGN KEY(partyId) REFERENCES party(partyId)
+    FOREIGN KEY(partyId) REFERENCES party(partyId),
+    FOREIGN KEY(roomId) REFERENCES room(roomId)
 );
 
 CREATE TABLE stay (

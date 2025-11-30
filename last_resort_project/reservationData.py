@@ -15,7 +15,7 @@ MAX_STAY = 10
 max_offset_days = (END_DATE_RANGE - START_DATE_RANGE).days
 
 data = pd.DataFrame({
-    'partyId': np.random.randint(1, 76, size=NUM_ROWS),
+    'partyId': np.random.randint(1, 101, size=NUM_ROWS),
     'day_offset': np.random.randint(0, max_offset_days, size=NUM_ROWS),
     'stay_days': np.random.randint(MIN_STAY, MAX_STAY + 1, size=NUM_ROWS)
 })
@@ -42,30 +42,41 @@ def get_status(row):
 
 data['status'] = data.apply(get_status, axis=1)
 
-final_df = data[['partyId', 'startDate', 'endDate', 'status']]
-
-# --- 3. 写入你的真正 SQLite 数据库 ---
+# --- 3. 为 CheckedIn / CheckedOut 随机分配有效 roomId ---
+# 读取数据库中的房间 ID
 DB_FILE = "/Users/su/Desktop/Database/Hotel_Last_Resort/last_resort_project/hotel1.db"
-TABLE_NAME = "reservation"
 
+conn = sqlite3.connect(DB_FILE)
+room_ids = pd.read_sql("SELECT roomId FROM room;", conn)['roomId'].tolist()
+conn.close()
+
+def assign_room(status):
+    if status == 'Booked':
+        return None  # 未入住，不分配房
+    return np.random.choice(room_ids)  # CheckedIn / CheckedOut 分配房间
+
+data['roomId'] = data['status'].apply(assign_room)
+
+# 最终数据列
+final_df = data[['partyId', 'startDate', 'endDate', 'status', 'roomId']]
+
+# --- 4. 写入 SQLite ---
 try:
     conn = sqlite3.connect(DB_FILE)
     
-    # 插入前清空旧数据（可选）
-    conn.execute(f"DELETE FROM {TABLE_NAME};")  
+    # 清空旧数据
+    conn.execute("DELETE FROM reservation;")
 
-    # 用 executemany 来插入
     insert_sql = """
-        INSERT INTO reservation (partyId, startDate, endDate, status)
-        VALUES (?, ?, ?, ?)
+        INSERT INTO reservation (partyId, startDate, endDate, status, roomId)
+        VALUES (?, ?, ?, ?, ?)
     """
 
     conn.executemany(insert_sql, final_df.values.tolist())
     conn.commit()
 
-    print("🎉 成功将 200 条记录写入你现有的 hotel1.db 的 reservation 表！")
+    print("🎉 成功将 200 条带 roomId 的 reservation 写入数据库！")
 
-    # 验证
     sample = pd.read_sql("SELECT * FROM reservation LIMIT 5", conn)
     print("\n--- 写入验证 (前 5 行) ---")
     print(sample)

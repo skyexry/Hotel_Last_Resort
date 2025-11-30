@@ -1,4 +1,3 @@
--- checked: Phone numbers updated to 10-digit format
 -- ==========================================
 -- 1. basic
 
@@ -125,64 +124,6 @@ INSERT INTO person (partyId, firstName, lastName) VALUES
 -- 假设 reservation 表结构：
 -- reservation(partyId INT, startDate DATETIME, endDate DATETIME, status NVARCHAR(20))
 
-WITH seq AS (
-    SELECT 1 AS n
-    UNION ALL
-    SELECT n + 1 FROM seq WHERE n < 200
-)
-INSERT INTO reservation (partyId, startDate, endDate, status)
-SELECT
-    -- 随机选择 partyId 1~75
-    (ABS(CHECKSUM(NEWID())) % 75) + 1 AS partyId,
-
-    -- 随机 startDate: 2025-09-01 到 2025-12-31
-    DATEADD(
-        day,
-        ROUND(DATEDIFF(day, '2025-09-01', '2025-12-31') * RAND(CHECKSUM(NEWID())), 0),
-        '2025-09-01'
-    ) AS startDate,
-
-    -- endDate = startDate + 随机停留天数 3~10
-    DATEADD(
-        day,
-        (ABS(CHECKSUM(NEWID())) % 8) + 3,
-        DATEADD(
-            day,
-            ROUND(DATEDIFF(day, '2025-09-01', '2025-12-31') * RAND(CHECKSUM(NEWID())), 0),
-            '2025-09-01'
-        )
-    ) AS endDate,
-
-    -- 状态判断
-    CASE
-        WHEN GETDATE() < DATEADD(
-                day,
-                ROUND(DATEDIFF(day, '2025-09-01', '2025-12-31') * RAND(CHECKSUM(NEWID())), 0),
-                '2025-09-01'
-             )
-        THEN 'Booked'
-        WHEN GETDATE() BETWEEN 
-             DATEADD(
-                day,
-                ROUND(DATEDIFF(day, '2025-09-01', '2025-12-31') * RAND(CHECKSUM(NEWID())), 0),
-                '2025-09-01'
-             )
-             AND 
-             DATEADD(
-                day,
-                (ABS(CHECKSUM(NEWID())) % 8) + 3,
-                DATEADD(
-                    day,
-                    ROUND(DATEDIFF(day, '2025-09-01', '2025-12-31') * RAND(CHECKSUM(NEWID())), 0),
-                    '2025-09-01'
-                )
-             )
-        THEN 'CheckedIn'
-        ELSE 'CheckedOut'
-    END AS status
-FROM seq
-OPTION (MAXRECURSION 0);
-
 
 -- 5. Events & Billing
 INSERT INTO event (eventId, name, description, startDate, endDate, partyId, roomId) VALUES
@@ -199,12 +140,15 @@ INSERT INTO event (eventId, name, description, startDate, endDate, partyId, room
 
 -- Billing
 INSERT INTO billing_account (accountId, partyId, status) SELECT partyId, partyId, 'Open' FROM party;
+
+
+-- 给每个 reservation 生成一条 charge 记录
 INSERT INTO charge (accountId, serviceCode, amount, dateIncurred)
 SELECT
     b.accountId,
     'ROOM',
-    r.baseRate * (julianday(res.endDate) - julianday(res.startDate)) AS amount,
-    res.startDate AS dateIncurred
+    rm.baseRate * (julianday(res.endDate) - julianday(res.startDate)),
+    res.startDate
 FROM reservation res
 JOIN billing_account b ON b.partyId = res.partyId
-JOIN room r ON r.roomId = ((res.partyId - 1) % (SELECT COUNT(*) FROM room)) + 1;
+JOIN room rm ON rm.roomId = res.roomId;

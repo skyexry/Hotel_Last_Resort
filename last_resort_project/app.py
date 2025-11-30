@@ -1,11 +1,27 @@
 import sqlite3
 import os
 from flask import Flask, render_template, request, redirect, url_for, g
+import subprocess
 
 app = Flask(__name__)
 DATABASE = os.path.join(app.root_path, 'hotel1.db')
 
 # last_resort_
+def init_reservation_data():
+    conn = sqlite3.connect(DATABASE)
+    cur = conn.cursor()
+
+    # 检查 reservation 表是否为空
+    cur.execute("SELECT COUNT(*) FROM reservation;")
+    count = cur.fetchone()[0]
+
+    conn.close()
+
+    if count == 0:
+        print("⚠️ reservation is empty run the dataGeneration file")
+        subprocess.run(["python3", "reservationData.py"])
+        print("🎉 reservation data generated")
+
 
 def get_db():
     db = getattr(g, '_database', None)
@@ -33,6 +49,7 @@ def init_db():
         db.commit()
         print("Database initialized.")
         print("Using DB:", DATABASE)
+        init_reservation_data()
 
 @app.route('/')
 def dashboard():
@@ -204,7 +221,6 @@ def reservations():
         active_page='reservations'
     )
 
-
 @app.route('/reservations/new', methods=['GET', 'POST'])
 def new_reservation():
     db = get_db()
@@ -343,20 +359,38 @@ def billing():
 @app.route('/reports')
 def reports():
     db = get_db()
-    report_revenue = db.execute("""
+    report_revenuetop10 = db.execute("""
         SELECT
-    COALESCE(pe.firstName || ' ' || pe.lastName, o.orgName) AS partyName,
-    COUNT(DISTINCT r.resvId) AS stays,
-    SUM(c.amount) AS totalSpent
-FROM party p
-LEFT JOIN person pe ON p.partyId = pe.partyId
-LEFT JOIN organization o ON p.partyId = o.partyId
-LEFT JOIN billing_account b ON b.partyId = p.partyId
-LEFT JOIN charge c ON c.accountId = b.accountId
-LEFT JOIN reservation r ON r.partyId = p.partyId
-GROUP BY partyName
-ORDER BY totalSpent DESC
-LIMIT 10;
+            -- 聚合：获取客户名称
+            COALESCE(pe.firstName || ' ' || pe.lastName, o.orgName) AS partyName, 
+
+            -- 聚合：计算该客户所有预订的总住宿天数
+            SUM(julianday(r.endDate) - julianday(r.startDate)) AS stays,
+
+            -- 聚合：获取该客户的总花费
+            c.totalSpent
+            
+        FROM party p
+        LEFT JOIN person pe ON p.partyId = pe.partyId
+        LEFT JOIN organization o ON p.partyId = o.partyId
+
+        LEFT JOIN billing_account b ON b.partyId = p.partyId
+
+        -- 使用 CTE 或子查询计算每个账户的总支出
+        LEFT JOIN (
+            SELECT accountId, SUM(amount) AS totalSpent
+            FROM charge
+            GROUP BY accountId
+        ) c ON c.accountId = b.accountId
+
+        -- 关联到预订表，用于计算总天数
+        LEFT JOIN reservation r ON r.partyId = p.partyId
+
+        -- 按客户名称分组
+        GROUP BY partyName
+        -- 排序：按总花费降序排列 (收入榜)
+        ORDER BY c.totalSpent DESC
+        LIMIT 10;
     """).fetchall()
     
     report_util = db.execute("""
@@ -371,7 +405,7 @@ LIMIT 10;
     report_cancel = db.execute("""SELECT strftime('%Y-%m', startDate) as month, COUNT(*) as total_resv, SUM(CASE WHEN status = 'Cancelled' THEN 1 ELSE 0 END) as cancelled_count FROM reservation GROUP BY month ORDER BY month DESC""").fetchall()
     report_demographics = db.execute("""SELECT CASE WHEN pe.partyId IS NOT NULL THEN 'Individual' ELSE 'Organization' END as party_type, COUNT(DISTINCT b.accountId) as active_accounts, ROUND(AVG(total_amt), 2) as avg_spend FROM billing_account b JOIN party p ON b.partyId = p.partyId LEFT JOIN person pe ON p.partyId = pe.partyId JOIN (SELECT accountId, SUM(amount) as total_amt FROM charge GROUP BY accountId) c ON b.accountId = c.accountId GROUP BY party_type""").fetchall()
 
-    return render_template('reports.html', report_revenue=report_revenue, report_util=report_util, 
+    return render_template('reports.html', report_revenue=report_revenuetop10, report_util=report_util, 
                            report_monthly=report_monthly, report_service=report_service,
                            report_cancel=report_cancel, report_demographics=report_demographics,
                            active_page='reports')
