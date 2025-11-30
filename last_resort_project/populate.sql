@@ -142,13 +142,4 @@ INSERT INTO event (eventId, name, description, startDate, endDate, partyId, room
 INSERT INTO billing_account (accountId, partyId, status) SELECT partyId, partyId, 'Open' FROM party;
 
 
--- 给每个 reservation 生成一条 charge 记录
-INSERT INTO charge (accountId, serviceCode, amount, dateIncurred)
-SELECT
-    b.accountId,
-    'ROOM',
-    rm.baseRate * (julianday(res.endDate) - julianday(res.startDate)),
-    res.startDate
-FROM reservation res
-JOIN billing_account b ON b.partyId = res.partyId
-JOIN room rm ON rm.roomId = res.roomId;
+ 

@@ -2,16 +2,21 @@ import pandas as pd
 import numpy as np
 import sqlite3
 from datetime import date, timedelta
+import os
 
-# --- 1. 定义参数 ---
+# --- 1. 参数配置 ---
 NUM_ROWS = 200
 START_DATE_RANGE = date(2025, 9, 1)
 END_DATE_RANGE = date(2026, 1, 1)
 OBSERVATION_DATE = date(2025, 11, 25)
-MIN_STAY = 3
+MIN_STAY = 2
 MAX_STAY = 10
 
-# --- 2. 生成随机 reservation 数据 ---
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DB_FILE = os.path.join(BASE_DIR, "hotel1.db")
+
+
+# --- 2. 生成 reservation 数据 ---
 max_offset_days = (END_DATE_RANGE - START_DATE_RANGE).days
 
 data = pd.DataFrame({
@@ -20,70 +25,81 @@ data = pd.DataFrame({
     'stay_days': np.random.randint(MIN_STAY, MAX_STAY + 1, size=NUM_ROWS)
 })
 
-data['startDate'] = (
-    pd.to_datetime(START_DATE_RANGE)
-    + data['day_offset'].apply(lambda x: timedelta(days=x))
-).dt.date
+# 日期必须保证是 Python date 类型，不是 Timestamp
+data['startDate'] = [
+    START_DATE_RANGE + timedelta(days=o) for o in data['day_offset']
+]
 
-data['endDate'] = (
-    pd.to_datetime(data['startDate'])
-    + data['stay_days'].apply(lambda x: timedelta(days=x))
-).dt.date
+data['endDate'] = [
+    s + timedelta(days=d) for s, d in zip(data['startDate'], data['stay_days'])
+]
 
 def get_status(row):
-    start = row['startDate']
-    end = row['endDate']
-    today = OBSERVATION_DATE
-    if today < start:
+    if OBSERVATION_DATE < row['startDate']:
         return 'Booked'
-    if start <= today < end:
+    if row['startDate'] <= OBSERVATION_DATE < row['endDate']:
         return 'CheckedIn'
     return 'CheckedOut'
 
 data['status'] = data.apply(get_status, axis=1)
 
-# --- 3. 为 CheckedIn / CheckedOut 随机分配有效 roomId ---
-# 读取数据库中的房间 ID
-DB_FILE = "/Users/su/Desktop/Database/Hotel_Last_Resort/last_resort_project/hotel1.db"
 
+# --- 3. 分配 roomId（仅给 CheckedIn / CheckedOut） ---
 conn = sqlite3.connect(DB_FILE)
 room_ids = pd.read_sql("SELECT roomId FROM room;", conn)['roomId'].tolist()
 conn.close()
 
 def assign_room(status):
-    if status == 'Booked':
-        return None  # 未入住，不分配房
-    return np.random.choice(room_ids)  # CheckedIn / CheckedOut 分配房间
+    return np.random.choice(room_ids) if status != 'Booked' else None
 
 data['roomId'] = data['status'].apply(assign_room)
 
 # 最终数据列
 final_df = data[['partyId', 'startDate', 'endDate', 'status', 'roomId']]
 
-# --- 4. 写入 SQLite ---
+
+# --- 4. 写入 reservation 并生成 charge ---
 try:
     conn = sqlite3.connect(DB_FILE)
-    
-    # 清空旧数据
-    conn.execute("DELETE FROM reservation;")
+    cur = conn.cursor()
 
+    # 清空旧数据
+    cur.execute("DELETE FROM reservation;")
+    cur.execute("DELETE FROM charge;")
+
+    # 插入 reservation
     insert_sql = """
         INSERT INTO reservation (partyId, startDate, endDate, status, roomId)
         VALUES (?, ?, ?, ?, ?)
     """
+    cur.executemany(insert_sql, final_df.values.tolist())
 
-    conn.executemany(insert_sql, final_df.values.tolist())
+    # --- ★ 新增：生成 room charge（关键） ---
+    cur.execute("""
+        INSERT INTO charge (accountId, serviceCode, amount, dateIncurred)
+        SELECT
+            b.accountId,
+            'ROOM',
+            rm.baseRate * (julianday(r.endDate) - julianday(r.startDate)),
+            r.startDate
+        FROM reservation r
+        JOIN billing_account b ON b.partyId = r.partyId
+        JOIN room rm ON rm.roomId = r.roomId
+        WHERE r.roomId IS NOT NULL;
+    """)
+
     conn.commit()
 
-    print("🎉 成功将 200 条带 roomId 的 reservation 写入数据库！")
+    print("🎉 成功写入 reservation 并生成 ROOM charge！")
 
-    sample = pd.read_sql("SELECT * FROM reservation LIMIT 5", conn)
-    print("\n--- 写入验证 (前 5 行) ---")
-    print(sample)
+    print("\n--- Reservation 示例 ---")
+    print(pd.read_sql("SELECT * FROM reservation LIMIT 5", conn))
+
+    print("\n--- Charge 示例 ---")
+    print(pd.read_sql("SELECT * FROM charge LIMIT 5", conn))
 
 except Exception as e:
-    print(f"⚠️ 写入数据库时发生错误: {e}")
+    print(f"⚠️ 数据库写入错误: {e}")
 
 finally:
-    if 'conn' in locals():
-        conn.close()
+    conn.close()

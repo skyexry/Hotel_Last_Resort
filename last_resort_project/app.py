@@ -191,7 +191,7 @@ def reservations():
 
     # direction 安全检查
     direction = "ASC" if direction == "asc" else "DESC"
-    
+
     sql = f"""
         SELECT 
             r.resvId, r.startDate, r.endDate, r.status,
@@ -406,10 +406,33 @@ def reports():
         FROM room r JOIN room_has_function rhf ON r.roomId = rhf.roomId JOIN room_function rf ON rhf.functionCode = rf.functionCode GROUP BY rf.name
     """).fetchall()
     
-    report_monthly = db.execute("""SELECT strftime('%Y-%m', dateIncurred) as month, SUM(amount) as revenue FROM charge GROUP BY month ORDER BY month DESC""").fetchall()
-    report_service = db.execute("""SELECT st.description, COUNT(c.chargeId) as usage_count, SUM(c.amount) as total_revenue FROM charge c JOIN service_type st ON c.serviceCode = st.serviceCode GROUP BY st.description ORDER BY total_revenue DESC""").fetchall()
-    report_cancel = db.execute("""SELECT strftime('%Y-%m', startDate) as month, COUNT(*) as total_resv, SUM(CASE WHEN status = 'Cancelled' THEN 1 ELSE 0 END) as cancelled_count FROM reservation GROUP BY month ORDER BY month DESC""").fetchall()
-    report_demographics = db.execute("""SELECT CASE WHEN pe.partyId IS NOT NULL THEN 'Individual' ELSE 'Organization' END as party_type, COUNT(DISTINCT b.accountId) as active_accounts, ROUND(AVG(total_amt), 2) as avg_spend FROM billing_account b JOIN party p ON b.partyId = p.partyId LEFT JOIN person pe ON p.partyId = pe.partyId JOIN (SELECT accountId, SUM(amount) as total_amt FROM charge GROUP BY accountId) c ON b.accountId = c.accountId GROUP BY party_type""").fetchall()
+    report_monthly = db.execute("""
+        SELECT strftime('%Y-%m', dateIncurred) as month, 
+        SUM(amount) as revenue FROM charge 
+        GROUP BY month 
+        ORDER BY month DESC""").fetchall()
+    
+    report_monthly = [dict(row) for row in report_monthly]
+
+    report_service = db.execute("""SELECT st.description, 
+                                COUNT(c.chargeId) as usage_count, 
+                                SUM(c.amount) as total_revenue FROM charge c 
+                                JOIN service_type st ON c.serviceCode = st.serviceCode 
+                                GROUP BY st.description ORDER BY total_revenue DESC""").fetchall()
+    
+    report_cancel = db.execute("""SELECT strftime('%Y-%m', startDate) as month, 
+                               COUNT(*) as total_resv, 
+                               SUM(CASE WHEN status = 'Cancelled' THEN 1 ELSE 0 END) as cancelled_count FROM reservation 
+                               GROUP BY month ORDER BY month DESC""").fetchall()
+    
+    report_demographics = db.execute("""SELECT CASE WHEN pe.partyId IS NOT NULL 
+                                     THEN 'Individual' ELSE 'Organization' END as party_type, 
+                                     COUNT(DISTINCT b.accountId) as active_accounts, 
+                                     ROUND(AVG(total_amt), 2) as avg_spend FROM billing_account b 
+                                     JOIN party p ON b.partyId = p.partyId 
+                                     LEFT JOIN person pe ON p.partyId = pe.partyId 
+                                     JOIN (SELECT accountId, SUM(amount) as total_amt FROM charge GROUP BY accountId) c ON b.accountId = c.accountId 
+                                     GROUP BY party_type""").fetchall()
 
     return render_template('reports.html', report_revenue=report_revenuetop10, report_util=report_util, 
                            report_monthly=report_monthly, report_service=report_service,
