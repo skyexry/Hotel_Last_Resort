@@ -308,14 +308,15 @@ def parties():
     params = []
     if search_query:
         sql += """ 
-            AND (
-                pe.firstName LIKE ? 
-                OR pe.lastName LIKE ? 
-                OR o.orgName LIKE ?
-            )
+           AND (
+            pe.firstName LIKE ? 
+            OR pe.lastName LIKE ? 
+            OR (pe.firstName || ' ' || pe.lastName) LIKE ?
+            OR o.orgName LIKE ?
+        )
         """
         s = f'%{search_query}%'
-        params.extend([s, s, s])
+        params.extend([s, s, s, s])
 
     # --- 6) 排序部分 ---
     sql += f" ORDER BY {sort_sql} {order}"
@@ -363,10 +364,8 @@ def reports():
         SELECT
             -- 聚合：获取客户名称
             COALESCE(pe.firstName || ' ' || pe.lastName, o.orgName) AS partyName, 
-
             -- 聚合：计算该客户所有预订的总住宿天数
             SUM(julianday(r.endDate) - julianday(r.startDate)) AS stays,
-
             -- 聚合：获取该客户的总花费
             c.totalSpent
             
