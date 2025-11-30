@@ -191,7 +191,7 @@ def reservations():
 
     # direction 安全检查
     direction = "ASC" if direction == "asc" else "DESC"
-
+    
     sql = f"""
         SELECT 
             r.resvId, r.startDate, r.endDate, r.status,
@@ -206,9 +206,16 @@ def reservations():
 
     params = []
     if search_query:
-        sql += " AND (pe.firstName LIKE ? OR pe.lastName LIKE ? OR o.orgName LIKE ?)"
+        sql += """ 
+           AND (
+            pe.firstName LIKE ? 
+            OR pe.lastName LIKE ? 
+            OR (pe.firstName || ' ' || pe.lastName) LIKE ?
+            OR o.orgName LIKE ?
+        )
+        """
         s = f'%{search_query}%'
-        params.extend([s, s, s])
+        params.extend([s, s, s, s])
 
     # 排序
     sql += f" ORDER BY {sort_col} {direction}"
