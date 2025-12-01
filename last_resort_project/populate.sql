@@ -142,4 +142,18 @@ INSERT INTO event (eventId, name, description, startDate, endDate, partyId, room
 INSERT INTO billing_account (accountId, partyId, status) SELECT partyId, partyId, 'Open' FROM party;
 
 
- 
+INSERT INTO charge (accountId, serviceCode, amount, dateIncurred)
+VALUES
+(5, 'ROOM', 350, '2025-11-10'),
+(5, 'FOOD', 120, '2025-11-10'),
+(5, 'SPA', 200, '2025-11-11'),
+
+(6, 'ROOM', 500, '2025-11-12'),
+(6, 'EVENT', 3000, '2025-11-13'),
+
+(10, 'ROOM', 800, '2025-11-20'),
+(10, 'MISC', 75, '2025-11-20'),
+
+(15, 'ROOM', 1200, '2025-11-22'),
+(15, 'FOOD', 180, '2025-11-22');
+

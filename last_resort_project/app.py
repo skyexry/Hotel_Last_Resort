@@ -420,6 +420,9 @@ def reports():
                                 JOIN service_type st ON c.serviceCode = st.serviceCode 
                                 GROUP BY st.description ORDER BY total_revenue DESC""").fetchall()
     
+    total_rev = sum(row['total_revenue'] for row in report_service)
+
+
     report_cancel = db.execute("""SELECT strftime('%Y-%m', startDate) as month, 
                                COUNT(*) as total_resv, 
                                SUM(CASE WHEN status = 'Cancelled' THEN 1 ELSE 0 END) as cancelled_count FROM reservation 
@@ -434,9 +437,27 @@ def reports():
                                      JOIN (SELECT accountId, SUM(amount) as total_amt FROM charge GROUP BY accountId) c ON b.accountId = c.accountId 
                                      GROUP BY party_type""").fetchall()
 
+    report_average_stay_length = db.execute("""SELECT rf.name AS room_type,
+                                    ROUND(AVG(julianday(r.endDate) - julianday(r.startDate)), 2) AS avg_stay
+                                    FROM reservation r
+                                    JOIN room rm ON r.roomId = rm.roomId
+                                    JOIN room_has_function rhf ON rm.roomId = rhf.roomId
+                                    JOIN room_function rf ON rhf.functionCode = rf.functionCode
+                                    GROUP BY room_type
+                                    ORDER BY avg_stay DESC;
+                                    """).fetchall() #add a new query for average stay length per room type
+
+    report_peak_occupancy = db.execute("""SELECT strftime('%w', startDate) AS weekday,
+                                    COUNT(*) AS reservations,
+                                    SUM(CASE WHEN status != 'Cancelled' THEN 1 ELSE 0 END) AS active_reservations
+                                    FROM reservation
+                                    GROUP BY weekday
+                                    ORDER BY weekday;
+                                    """).fetchall() #add a new query for peak occupancy days
+
     return render_template('reports.html', report_revenue=report_revenuetop10, report_util=report_util, 
                            report_monthly=report_monthly, report_service=report_service,
-                           report_cancel=report_cancel, report_demographics=report_demographics,
+                           report_cancel=report_cancel, report_demographics=report_demographics, report_average_stay=report_average_stay_length, report_peak_occupancy=report_peak_occupancy, total_rev=total_rev,
                            active_page='reports')
 
 if __name__ == '__main__':

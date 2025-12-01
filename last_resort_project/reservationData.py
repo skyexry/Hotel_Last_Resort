@@ -3,6 +3,7 @@ import numpy as np
 import sqlite3
 from datetime import date, timedelta
 import os
+import random
 
 # --- 1. 参数配置 ---
 NUM_ROWS = 200
@@ -25,7 +26,6 @@ data = pd.DataFrame({
     'stay_days': np.random.randint(MIN_STAY, MAX_STAY + 1, size=NUM_ROWS)
 })
 
-# 日期必须保证是 Python date 类型，不是 Timestamp
 data['startDate'] = [
     START_DATE_RANGE + timedelta(days=o) for o in data['day_offset']
 ]
@@ -34,6 +34,7 @@ data['endDate'] = [
     s + timedelta(days=d) for s, d in zip(data['startDate'], data['stay_days'])
 ]
 
+
 def get_status(row):
     if OBSERVATION_DATE < row['startDate']:
         return 'Booked'
@@ -41,20 +42,31 @@ def get_status(row):
         return 'CheckedIn'
     return 'CheckedOut'
 
+
 data['status'] = data.apply(get_status, axis=1)
 
 
-# --- 3. 分配 roomId（仅给 CheckedIn / CheckedOut） ---
+# --- 2.5 真实化：随机生成 Cancelled 状态 ---
+cancel_indices = data[(data['status'] == 'Booked')].sample(frac=0.10, random_state=42).index
+
+for idx in cancel_indices:
+    row = data.loc[idx]
+    start = row["startDate"]
+    cancel_date = start - timedelta(days=random.randint(1, 7))
+    data.at[idx, "status"] = "Cancelled"
+    data.at[idx, "endDate"] = cancel_date   # 对 cancelled，endDate 改为 cancel date
+
+
+# --- 3. 只给 CheckedIn / CheckedOut 分配房间 ---
 conn = sqlite3.connect(DB_FILE)
 room_ids = pd.read_sql("SELECT roomId FROM room;", conn)['roomId'].tolist()
 conn.close()
 
 def assign_room(status):
-    return np.random.choice(room_ids) if status != 'Booked' else None
+    return np.random.choice(room_ids) if status not in ['Booked', 'Cancelled'] else None
 
 data['roomId'] = data['status'].apply(assign_room)
 
-# 最终数据列
 final_df = data[['partyId', 'startDate', 'endDate', 'status', 'roomId']]
 
 
@@ -74,7 +86,7 @@ try:
     """
     cur.executemany(insert_sql, final_df.values.tolist())
 
-    # --- ★ 新增：生成 room charge（关键） ---
+    # --- (A) ROOM charge：仅入住/已退房客户 ---
     cur.execute("""
         INSERT INTO charge (accountId, serviceCode, amount, dateIncurred)
         SELECT
@@ -88,15 +100,41 @@ try:
         WHERE r.roomId IS NOT NULL;
     """)
 
+    # --- (B) FOOD / SPA / MISC 消费 ---
+    charge_rows = []
+    for _, row in final_df.iterrows():
+        if row["status"] in ["Booked", "Cancelled"]:
+            continue
+
+        partyId = row["partyId"]
+        start = row["startDate"]
+        end = row["endDate"]
+        stay_len = (end - start).days
+
+        num_charges = random.randint(1, 3)
+
+        for _ in range(num_charges):
+            incur_date = start + timedelta(days=random.randint(0, max(0, stay_len - 1)))
+
+            service = random.choice(["FOOD", "SPA", "MISC"])
+
+            if service == "FOOD":
+                amount = random.randint(40, 200)
+            elif service == "SPA":
+                amount = random.randint(80, 400)
+            else:
+                amount = random.randint(20, 120)
+
+            charge_rows.append((partyId, service, amount, incur_date))
+
+    # 插入消费记录
+    cur.executemany("""
+        INSERT INTO charge (accountId, serviceCode, amount, dateIncurred)
+        VALUES (?, ?, ?, ?)
+    """, charge_rows)
+
     conn.commit()
-
-    print("🎉 成功写入 reservation 并生成 ROOM charge！")
-
-    print("\n--- Reservation 示例 ---")
-    print(pd.read_sql("SELECT * FROM reservation LIMIT 5", conn))
-
-    print("\n--- Charge 示例 ---")
-    print(pd.read_sql("SELECT * FROM charge LIMIT 5", conn))
+    print("🎉 已成功生成 reservation + ROOM + FOOD + SPA + MISC + Cancelled 数据！")
 
 except Exception as e:
     print(f"⚠️ 数据库写入错误: {e}")
