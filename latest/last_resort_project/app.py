@@ -2,9 +2,11 @@ import sqlite3
 import os
 from flask import Flask, render_template, request, redirect, url_for, g
 import subprocess
+from datetime import date, timedelta
 
 app = Flask(__name__)
 DATABASE = os.path.join(app.root_path, 'hotel1.db')
+SYSTEM_DATE = date(2025, 11, 25)
 
 # last_resort_
 def init_reservation_data():
@@ -54,32 +56,56 @@ def init_db():
 @app.route('/')
 def dashboard():
     db = get_db()
-    occupancy = db.execute("SELECT COUNT(*) FROM room WHERE currentStatus = 'Occupied'").fetchone()[0]
-    total_rooms = db.execute("SELECT COUNT(*) FROM room").fetchone()[0]
-    occupancy_rate = round((occupancy / total_rooms * 100), 1) if total_rooms > 0 else 0
+    today_str = SYSTEM_DATE.strftime('%Y-%m-%d')
     
-    today_arrivals = db.execute("""
-        SELECT r.resvId, 
-               COALESCE(pe.firstName || ' ' || pe.lastName, o.orgName) as guestName, 
-               r.status, rm.roomNumber
+    occupancy_count = db.execute("""
+        SELECT COUNT(*) 
+        FROM reservation 
+        WHERE status IN ('CheckedIn', 'Booked')
+        AND startDate <= ? AND endDate > ?
+    """, (today_str, today_str)).fetchone()[0]
+
+    total_rooms = db.execute("SELECT COUNT(*) FROM room").fetchone()[0]
+    occupancy_rate = round((occupancy_count / total_rooms * 100), 1) if total_rooms > 0 else 0
+    arrivals_count = db.execute("SELECT COUNT(*) FROM reservation WHERE startDate = ?", (today_str,)).fetchone()[0]
+    departures_count = db.execute("SELECT COUNT(*) FROM reservation WHERE endDate = ?", (today_str,)).fetchone()[0]
+    revenue_today = db.execute("""
+        SELECT SUM(rm.baseRate)
         FROM reservation r
-        JOIN party py ON r.partyId = py.partyId
-        LEFT JOIN person pe ON py.partyId = pe.partyId
-        LEFT JOIN organization o ON py.partyId = o.partyId
-        LEFT JOIN room_assignment ra ON r.resvId = ra.resvId
-        LEFT JOIN room rm ON ra.roomId = rm.roomId
-        WHERE r.startDate <= date('now') AND r.status = 'Booked'
-    """).fetchall()
+        JOIN room rm ON r.roomId = rm.roomId
+        WHERE r.status IN ('CheckedIn', 'Booked')
+        AND r.startDate <= ? AND r.endDate > ?
+    """, (today_str, today_str)).fetchone()[0]
+    revenue_today = round(revenue_today, 2) if revenue_today else 0
+    arrivals_data = db.execute("""
+        SELECT r.resvId, 
+               CASE 
+                   WHEN pe.partyId IS NOT NULL THEN pe.firstName || ' ' || pe.lastName 
+                   ELSE o.orgName 
+               END as guestName,
+               r.status, 
+               rm.roomNumber
+        FROM reservation r
+        JOIN party p ON r.partyId = p.partyId
+        LEFT JOIN person pe ON p.partyId = pe.partyId
+        LEFT JOIN organization o ON p.partyId = o.partyId
+        LEFT JOIN room rm ON r.roomId = rm.roomId
+        WHERE r.startDate = ?
+        ORDER BY r.status DESC
+        LIMIT 5
+    """, (today_str,)).fetchall()
 
-    revenue = db.execute("SELECT SUM(amount) FROM charge WHERE dateIncurred = date('now')").fetchone()[0] or 0.00
-
-    kpi = {
-        "occupancy": occupancy_rate,
-        "arrivals": len(today_arrivals),
-        "departures": 0,
-        "revenue": revenue
+    kpi_data = {
+        'occupancy': occupancy_rate,
+        'arrivals': arrivals_count,
+        'departures': departures_count,
+        'revenue': revenue_today
     }
-    return render_template('dashboard.html', kpi=kpi, arrivals=today_arrivals, active_page='dashboard')
+
+    return render_template('dashboard.html', 
+                           kpi=kpi_data, 
+                           arrivals=arrivals_data, 
+                           active_page='dashboard')
 
 @app.route('/rooms')
 def rooms():
@@ -170,14 +196,10 @@ def room_detail(room_id):
 @app.route('/reservations')
 def reservations():
     db = get_db()
-
-    # 获取搜索 + 排序参数（兼容 order 和 direction）
     search_query = request.args.get('search', '')
-    sort = request.args.get('sort', 'startDate')   # 默认按开始日期排序
-    # 兼容两种前端参数名：order 或 direction
+    sort = request.args.get('sort', 'startDate')
     direction = request.args.get('direction', request.args.get('order', 'desc')).lower()
 
-    # 允许排序的列（为了安全） -- key 是前端会发的 sort 值
     allowed_sort_cols = {
         "resvId": "r.resvId",
         "startDate": "r.startDate",
@@ -185,11 +207,7 @@ def reservations():
         "status": "r.status",
         "displayName": "displayName"
     }
-
-    # 如果用户乱写排序字段，fallback 到 startDate
     sort_col = allowed_sort_cols.get(sort, "r.startDate")
-
-    # direction 安全检查
     direction = "ASC" if direction == "asc" else "DESC"
 
     sql = f"""
@@ -216,8 +234,6 @@ def reservations():
         """
         s = f'%{search_query}%'
         params.extend([s, s, s, s])
-
-    # 排序
     sql += f" ORDER BY {sort_col} {direction}"
 
     reservations = db.execute(sql, params).fetchall()
@@ -367,98 +383,148 @@ def billing():
 @app.route('/reports')
 def reports():
     db = get_db()
+    # 1. Top 10 Clients
     report_revenuetop10 = db.execute("""
-        SELECT
-            -- 聚合：获取客户名称
-            COALESCE(pe.firstName || ' ' || pe.lastName, o.orgName) AS partyName, 
-            -- 聚合：计算该客户所有预订的总住宿天数
-            SUM(julianday(r.endDate) - julianday(r.startDate)) AS stays,
-            -- 聚合：获取该客户的总花费
-            c.totalSpent
-            
-        FROM party p
+        SELECT p.partyId, 
+               CASE WHEN pe.partyId IS NOT NULL THEN pe.firstName || ' ' || pe.lastName 
+                    ELSE o.orgName END as partyName,
+               COUNT(r.resvId) as stays,
+               SUM(c.amount) as totalSpent
+        FROM billing_account b
+        JOIN party p ON b.partyId = p.partyId
         LEFT JOIN person pe ON p.partyId = pe.partyId
         LEFT JOIN organization o ON p.partyId = o.partyId
-
-        LEFT JOIN billing_account b ON b.partyId = p.partyId
-
-        -- 使用 CTE 或子查询计算每个账户的总支出
-        LEFT JOIN (
-            SELECT accountId, SUM(amount) AS totalSpent
-            FROM charge
-            GROUP BY accountId
-        ) c ON c.accountId = b.accountId
-
-        -- 关联到预订表，用于计算总天数
-        LEFT JOIN reservation r ON r.partyId = p.partyId
-
-        -- 按客户名称分组
-        GROUP BY partyName
-        -- 排序：按总花费降序排列 (收入榜)
-        ORDER BY c.totalSpent DESC
-        LIMIT 10;
+        JOIN charge c ON b.accountId = c.accountId
+        JOIN reservation r ON b.partyId = r.partyId
+        GROUP BY p.partyId
+        ORDER BY totalSpent DESC
+        LIMIT 10
     """).fetchall()
-    
+
+    # 2. Room Utilization
     report_util = db.execute("""
-        SELECT rf.name, COUNT(r.roomId) as total_rooms,
-               SUM(CASE WHEN r.currentStatus = 'Occupied' THEN 1 ELSE 0 END) as occupied_count,
-               ROUND(CAST(SUM(CASE WHEN r.currentStatus = 'Occupied' THEN 1 ELSE 0 END) AS FLOAT) / COUNT(r.roomId) * 100, 1) as util_rate
-        FROM room r JOIN room_has_function rhf ON r.roomId = rhf.roomId JOIN room_function rf ON rhf.functionCode = rf.functionCode GROUP BY rf.name
+        SELECT rf.name as room_type,
+               COUNT(r.roomId) as total_rooms,
+               SUM(CASE WHEN r.currentStatus = 'Occupied' THEN 1 ELSE 0 END) as occupied_count
+        FROM room r
+        JOIN room_has_function rhf ON r.roomId = rhf.roomId
+        JOIN room_function rf ON rhf.functionCode = rf.functionCode
+        GROUP BY room_type
+    """).fetchall()
+
+    # 3. Monthly Revenue
+    report_monthly = db.execute("""
+        SELECT strftime('%Y-%m', dateIncurred) as month,
+               SUM(amount) as total_rev
+        FROM charge
+        GROUP BY month
+        ORDER BY month ASC
+    """).fetchall()
+
+    # 4. Service Breakdown
+    report_service = db.execute("""
+        SELECT serviceCode, SUM(amount) as total
+        FROM charge
+        WHERE serviceCode != 'ROOM'
+        GROUP BY serviceCode
+        ORDER BY total DESC
+    """).fetchall()
+
+    # 5. Cancellation Stats
+    report_cancel = db.execute("""
+        SELECT strftime('%Y-%m', startDate) as month,
+               COUNT(*) as total_resv,
+               SUM(CASE WHEN status = 'Cancelled' THEN 1 ELSE 0 END) as cancelled_count
+        FROM reservation
+        GROUP BY month
+        ORDER BY month DESC
+    """).fetchall()
+
+    # 6. Demographics
+    report_demographics = db.execute("""
+        SELECT CASE WHEN pe.partyId IS NOT NULL THEN 'Individual' ELSE 'Organization' END as party_type,
+               COUNT(DISTINCT b.accountId) as active_accounts,
+               ROUND(AVG(total_amt), 2) as avg_spend
+        FROM billing_account b
+        JOIN party p ON b.partyId = p.partyId
+        LEFT JOIN person pe ON p.partyId = pe.partyId
+        JOIN (SELECT accountId, SUM(amount) as total_amt FROM charge GROUP BY accountId) c ON b.accountId = c.accountId
+        GROUP BY party_type
     """).fetchall()
     
-    
-    report_monthly = db.execute("""
-        SELECT strftime('%Y-%m', dateIncurred) as month, 
-        SUM(amount) as revenue FROM charge 
-        GROUP BY month 
-        ORDER BY month DESC""").fetchall()
-    
-    report_monthly = [dict(row) for row in report_monthly]
+    # 7. Avg Stay Length
+    report_average_stay = db.execute("""
+        SELECT rf.name as room_type,
+               ROUND(AVG(julianday(endDate) - julianday(startDate)), 1) as avg_stay
+        FROM reservation r
+        JOIN room rm ON r.roomId = rm.roomId
+        JOIN room_has_function rhf ON rm.roomId = rhf.roomId
+        JOIN room_function rf ON rhf.functionCode = rf.functionCode
+        GROUP BY room_type
+        ORDER BY avg_stay DESC
+    """).fetchall()
 
-    report_service = db.execute("""SELECT st.description, 
-                                COUNT(c.chargeId) as usage_count, 
-                                SUM(c.amount) as total_revenue FROM charge c 
-                                JOIN service_type st ON c.serviceCode = st.serviceCode 
-                                GROUP BY st.description ORDER BY total_revenue DESC""").fetchall()
-    
-    total_rev = sum(row['total_revenue'] for row in report_service)
+    # 8. Peak Occupancy
+    report_peak_occupancy = db.execute("""
+        SELECT strftime('%w', startDate) AS weekday,
+               COUNT(*) AS reservations
+        FROM reservation
+        WHERE status != 'Cancelled'
+        GROUP BY weekday
+        ORDER BY weekday
+    """).fetchall()
 
+    # Chart 1: Revenue Line Chart
+    c1_labels = [row['month'] for row in report_monthly]
+    c1_data = [row['total_rev'] for row in report_monthly]
 
-    report_cancel = db.execute("""SELECT strftime('%Y-%m', startDate) as month, 
-                               COUNT(*) as total_resv, 
-                               SUM(CASE WHEN status = 'Cancelled' THEN 1 ELSE 0 END) as cancelled_count FROM reservation 
-                               GROUP BY month ORDER BY month DESC""").fetchall()
-    
-    report_demographics = db.execute("""SELECT CASE WHEN pe.partyId IS NOT NULL 
-                                     THEN 'Individual' ELSE 'Organization' END as party_type, 
-                                     COUNT(DISTINCT b.accountId) as active_accounts, 
-                                     ROUND(AVG(total_amt), 2) as avg_spend FROM billing_account b 
-                                     JOIN party p ON b.partyId = p.partyId 
-                                     LEFT JOIN person pe ON p.partyId = pe.partyId 
-                                     JOIN (SELECT accountId, SUM(amount) as total_amt FROM charge GROUP BY accountId) c ON b.accountId = c.accountId 
-                                     GROUP BY party_type""").fetchall()
+    # Chart 2: 7-Day Occupancy
+    observation_date = SYSTEM_DATE
+    c2_labels = []
+    c2_data = []
+    for i in range(6, -1, -1):
+        target_date = observation_date - timedelta(days=i)
+        t_str = target_date.strftime('%Y-%m-%d')
+        cnt = db.execute("""
+            SELECT COUNT(*) FROM reservation 
+            WHERE status IN ('CheckedIn', 'Booked') 
+            AND startDate <= ? AND endDate > ?
+        """, (t_str, t_str)).fetchone()[0]
+        c2_labels.append(target_date.strftime('%m-%d'))
+        c2_data.append(cnt)
 
-    report_average_stay_length = db.execute("""SELECT rf.name AS room_type,
-                                    ROUND(AVG(julianday(r.endDate) - julianday(r.startDate)), 2) AS avg_stay
-                                    FROM reservation r
-                                    JOIN room rm ON r.roomId = rm.roomId
-                                    JOIN room_has_function rhf ON rm.roomId = rhf.roomId
-                                    JOIN room_function rf ON rhf.functionCode = rf.functionCode
-                                    GROUP BY room_type
-                                    ORDER BY avg_stay DESC;
-                                    """).fetchall() #add a new query for average stay length per room type
+    # Chart 3: Service Revenue
+    c3_labels = [row['serviceCode'] for row in report_service]
+    c3_data = [row['total'] for row in report_service]
 
-    report_peak_occupancy = db.execute("""SELECT strftime('%w', startDate) AS weekday,
-                                    COUNT(*) AS reservations,
-                                    SUM(CASE WHEN status != 'Cancelled' THEN 1 ELSE 0 END) AS active_reservations
-                                    FROM reservation
-                                    GROUP BY weekday
-                                    ORDER BY weekday;
-                                    """).fetchall() #add a new query for peak occupancy days
+    # Chart 4: Guest Demographics (Pie)
+    c4_labels = [row['party_type'] for row in report_demographics]
+    c4_data = [row['active_accounts'] for row in report_demographics]
 
-    return render_template('reports.html', report_revenue=report_revenuetop10, report_util=report_util, 
-                           report_monthly=report_monthly, report_service=report_service,
-                           report_cancel=report_cancel, report_demographics=report_demographics, report_average_stay=report_average_stay_length, report_peak_occupancy=report_peak_occupancy, total_rev=total_rev,
+    trend_direction = 'flat'
+    if len(report_monthly) >= 2:
+        last_month_rev = report_monthly[-1]['total_rev']  
+        prev_month_rev = report_monthly[-2]['total_rev']
+        
+        if last_month_rev >= prev_month_rev:
+            trend_direction = 'up'
+        else:
+            trend_direction = 'down'
+
+    return render_template('reports.html', 
+                           report_revenue=report_revenuetop10, 
+                           report_util=report_util,
+                           report_monthly=report_monthly,
+                           report_service=report_service,
+                           report_cancel=report_cancel,
+                           report_demographics=report_demographics,
+                           report_average_stay=report_average_stay,
+                           report_peak_occupancy=report_peak_occupancy,
+                           c1_labels=c1_labels, c1_data=c1_data,
+                           c2_labels=c2_labels, c2_data=c2_data,
+                           c3_labels=c3_labels, c3_data=c3_data,
+                           c4_labels=c4_labels, c4_data=c4_data,
+                           trend_direction=trend_direction, 
                            active_page='reports')
 
 if __name__ == '__main__':
